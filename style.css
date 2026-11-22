@@ -240,3 +240,57 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .card .ord-item .ot{flex:1}
 .grip{font-family:var(--font);font-size:20px;color:var(--muted);direction:ltr;flex-shrink:0}
 .ord-item.dragging{z-index:5;box-shadow:0 10px 24px rgba(0,0,0,.25);transition:none;cursor:grabbing;border-color:var(--gold)}
+
+/* objectif */
+.goal{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2);margin:-4px 2px 8px;flex-shrink:0}
+.goal i{flex:1;height:6px;border-radius:3px;background:var(--line2);overflow:hidden}
+.goal b{display:block;height:100%;width:0;background:var(--gold);transition:width .4s}
+.goal.done b{background:var(--green)}
+.chip.pick{background:var(--surface2);border-style:dashed}
+/* choix des exercices */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);color:var(--text);width:100%;max-width:560px;max-height:88dvh;overflow-y:auto;border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h2{margin:4px 0 4px}
+.sheet h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:16px 2px 6px}
+.muted{color:var(--text3);font-size:13px;margin:0}
+.pk{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--bg2);margin-bottom:6px}
+.pk input{width:22px;height:22px;accent-color:var(--gold);flex-shrink:0}
+.pk .pi{font-size:22px}
+.pk b{display:block;font-size:14.5px}
+.pk small{display:block;color:var(--text3);font-size:12px}
+/* mot à mot */
+.mmline{min-height:60px;border-bottom:2px dashed var(--line);margin:8px 0 10px;padding-bottom:4px}
+.mmcur{color:var(--gold);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;direction:rtl}
+.tile{font-family:var(--ar);font-size:22px;line-height:1.7;padding:4px 14px;border-radius:12px;border:2px solid var(--line);background:var(--opt);color:var(--ink);box-shadow:0 3px 0 var(--line)}
+.tile.used{visibility:hidden}
+.shake{animation:shake .35s;border-color:var(--red)!important}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+/* premières lettres */
+.fls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;direction:rtl;margin:10px 0}
+.fls span{font-family:var(--ar);font-size:26px;min-width:44px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--tagbg);color:var(--arc)}
+/* effacement */
+.lvl{display:flex;justify-content:space-between;gap:4px;margin:4px 0 8px}
+.lvl span{flex:1;text-align:center;font-size:18px;color:var(--line)}
+.lvl span small{display:block;font-size:10.5px;color:var(--muted)}
+.lvl span.done{color:var(--gold)}
+.lvl span.cur{color:var(--gold);opacity:.6}
+.hid{color:var(--gold);opacity:.75}
+/* défi */
+.chrono{font-weight:700;color:var(--gold);font-size:15px}
+.endc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+.endc .big{font-size:48px}
+.endc .score{font-size:54px;font-weight:800;color:var(--ink)}
+.endc .score small{display:block;font-size:14px;font-weight:600;color:var(--muted)}
+/* ouverture */
+.opening{position:fixed;inset:0;z-index:40;background:var(--bg);background-image:var(--bg-img);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;transition:opacity .3s}
+.opening.out{opacity:0}
+.op-in{max-width:520px;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;margin:auto}
+.op-basm{font-family:var(--ar);font-size:28px;color:var(--gold)}
+.opening section{background:var(--card);color:var(--ink);border-radius:var(--r-card);border:var(--card-border);padding:14px 16px;width:100%;box-shadow:var(--card-shadow)}
+.opening h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.opening .ar{font-size:24px;line-height:2}
+.opening .fr{font-style:italic}
+.opening .hd{font-size:14.5px;line-height:1.55;margin:0;text-align:left}
+.opening small{display:block;color:var(--muted);font-size:12px;margin-top:8px}

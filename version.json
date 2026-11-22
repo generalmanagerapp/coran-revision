@@ -1,7 +1,18 @@
 {
-  "version": "1.5.2",
+  "version": "1.6.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.6.0",
+      "date": "2026-11-22",
+      "notes": [
+        "Nouveaux exercices : Mot à mot, Premières lettres, Écho, Effacement progressif",
+        "Défi chrono 60 s avec record",
+        "Choix des exercices (un ou plusieurs)",
+        "Objectif du jour, sauvegarde/transfert de la progression",
+        "Écran d'ouverture : duaa et hadith sahih du jour"
+      ]
+    },
     {
       "version": "1.5.2",
       "date": "2026-11-22",

@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.5.2';
+const VERSION = '1.6.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -14,15 +14,21 @@ const today = () => new Date().toLocaleDateString('sv');
 
 /* ---------- Modes ---------- */
 const MODES = {
-  suivante:   { label: 'Aya suivante',   icon: '⏭️' },
-  precedente: { label: 'Aya précédente', icon: '⏮️' },
-  complete:   { label: 'Compléter',      icon: '🧩' },
-  mot:        { label: 'Mot manquant',   icon: '🔤' },
-  sourate:    { label: 'Quelle sourate', icon: '📍' },
-  ordre:      { label: 'Remettre en ordre', icon: '🔢' },
-  recite:     { label: 'Réciter',        icon: '🎙️' },
-  ecoute:     { label: 'Écoute',         icon: '🎧' },
+  suivante:   { label: 'Aya suivante',   icon: '⏭️', g: 'quiz', d: 'Trouve l’aya qui vient juste après' },
+  precedente: { label: 'Aya précédente', icon: '⏮️', g: 'quiz', d: 'Trouve l’aya qui vient juste avant' },
+  complete:   { label: 'Compléter',      icon: '🧩', g: 'quiz', d: 'Choisis la fin de l’aya' },
+  mot:        { label: 'Mot manquant',   icon: '🔤', g: 'quiz', d: 'Retrouve le mot qui manque' },
+  sourate:    { label: 'Quelle sourate', icon: '📍', g: 'quiz', d: 'De quelle sourate vient l’aya ?' },
+  ordre:      { label: 'Remettre en ordre', icon: '🔢', g: 'quiz', d: 'Fais glisser 4 ayat dans l’ordre' },
+  motamot:    { label: 'Mot à mot',      icon: '🧱', g: 'quiz', d: 'Reconstitue l’aya en touchant les mots dans l’ordre' },
+  ecoute:     { label: 'Écoute',         icon: '🎧', g: 'quiz', d: 'Écoute et reconnais l’aya' },
+  recite:     { label: 'Réciter',        icon: '🎙️', g: 'recit', d: 'Récite la suite ou la fin de l’aya' },
+  lettres:    { label: 'Premières lettres', icon: '🔠', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
+  echo:       { label: 'Écho',           icon: '👂', g: 'memo', d: 'Écoute l’aya, puis répète-la sans le texte' },
+  efface:     { label: 'Effacement',     icon: '🧠', g: 'memo', d: 'Le texte s’efface petit à petit : tiens jusqu’au bout !' },
 };
+const GROUPS = { quiz: 'Quiz', recit: 'Récitation', memo: 'Mémorisation (jeux)' };
+const QUICK = ['suivante', 'precedente', 'complete', 'mot', 'sourate'];   // modes du défi chrono
 const RECITERS = {
   'Alafasy_128kbps': { n: 'Mishary Alafasy', d: ['Alafasy_128kbps'] },
   'Ghamadi_40kbps': { n: 'Saad Al-Ghamidi', d: ['Ghamadi_40kbps'] },
@@ -63,9 +69,10 @@ const SRS_STEPS = [60e3, 10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, recite: true, ecoute: true },
+  modes: { suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  best: 0, goalDone: {},
   current: 'mix',
-  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true },
+  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true, goal: 20, opening: true },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
@@ -324,11 +331,34 @@ function buildQuestion(mode) {
       let t = S.settings.reciteType; if (t === 'mix') t = Math.random() < .5 ? 'suite' : 'fin';
       if (t === 'suite') {
         const x = pickTarget(a => inPool(next(a))); if (!x) return null;
-        return { mode, sub: 'suite', target: next(x), show: x, prompt: 'Récite l’aya suivante', expected: next(x).tk };
+        return { mode, recit: true, sub: 'suite', target: next(x), show: x, prompt: 'Récite l’aya suivante', expected: next(x).tk };
       }
       const x = pickTarget(a => a.tk.length >= 4); if (!x) return null;
       const h = Math.min(Math.ceil(x.tk.length / 2), 12);
-      return { mode, sub: 'fin', target: x, prompt: 'Termine l’aya', showHtml: arBlock(x.tk.slice(0, h).join(' ') + ' …'), expected: x.tk.slice(h), startLen: h };
+      return { mode, recit: true, sub: 'fin', target: x, prompt: 'Termine l’aya', showHtml: arBlock(x.tk.slice(0, h).join(' ') + ' …'), expected: x.tk.slice(h), startLen: h };
+    }
+    case 'motamot': {
+      const x = pickTarget(a => a.tk.length >= 3); if (!x) return null;
+      let st = 0, en = x.tk.length;
+      if (en > 10) { st = rand(en - 8 + 1); en = st + 8; }          // longue aya : un passage de 8 mots
+      const words = x.tk.slice(st, en);
+      return { mode, target: x, prompt: 'Reconstitue l’aya mot à mot', words, tiles: shuffle(words.map((w, i) => ({ w, i }))),
+        before: x.tk.slice(0, st).join(' '), after: en < x.tk.length };
+    }
+    case 'lettres': {
+      const x = pickTarget(a => a.tk.length >= 2); if (!x) return null;
+      const fl = x.nw.map(w => w ? w[0] : '').filter(Boolean);
+      return { mode, recit: true, target: x, prompt: 'Récite l’aya avec seulement les premières lettres',
+        showHtml: `<div class="fls">${fl.map(l => `<span>${l}</span>`).join('')}</div>${frBlock(x)}<div class="ref">${esc(surahName(x.s))} · ${x.s}:${x.a}</div>`, expected: x.tk };
+    }
+    case 'echo': {
+      const x = pickTarget(() => true); if (!x) return null;
+      return { mode, recit: true, target: x, forcePlay: true, prompt: 'Écoute bien, puis répète l’aya sans la voir',
+        showHtml: `<div style="text-align:center;margin:10px 0"><button class="btn gold" data-listen>👂 Réécouter</button></div>${frBlock(x)}<div class="ref">${esc(surahName(x.s))} · ${x.s}:${x.a}</div>`, expected: x.tk };
+    }
+    case 'efface': {
+      const x = pickTarget(a => a.tk.length >= 3); if (!x) return null;
+      return { mode, target: x, efface: true, prompt: 'Lis et récite. À chaque niveau, le texte s’efface un peu plus !', hideOrder: shuffle(x.tk.map((_, i) => i)) };
     }
     case 'ecoute': {
       const x = pickTarget(() => true); if (!x) return null;
@@ -364,13 +394,57 @@ const session = { n: 0, ok: 0 };
 let currentCard = null;
 function updateSession() {
   $('#sessionInfo').textContent = session.n ? `${session.n} carte${session.n > 1 ? 's' : ''} · ${Math.round(100 * session.ok / session.n)} %` : '';
+  const g = S.settings.goal || 20, d = S.days[today()] || 0, el = $('#goal');
+  if (el) { el.querySelector('span').textContent = d >= g ? `🎉 Objectif du jour atteint : ${d}/${g}` : `Objectif du jour : ${d}/${g}`; el.querySelector('b').style.width = Math.min(100, 100 * d / g) + '%'; el.classList.toggle('done', d >= g); }
+  if (d >= g && !(S.goalDone || {})[today()]) { S.goalDone = S.goalDone || {}; S.goalDone[today()] = 1; save(); toast('🎉 Objectif du jour atteint, barakAllahu fik !'); }
 }
 function enabledModes() { return Object.keys(MODES).filter(m => S.modes[m]); }
 
 function renderModeBar() {
-  const list = [['mix', '🔀 Mix'], ...enabledModes().map(m => [m, MODES[m].icon + ' ' + MODES[m].label])];
-  if (S.current !== 'mix' && !S.modes[S.current]) S.current = 'mix';
-  $('#modeBar').innerHTML = list.map(([k, l]) => `<button class="chip ${S.current === k ? 'on' : ''}" data-mode="${k}">${l}</button>`).join('');
+  const list = [['mix', `🔀 Mix (${enabledModes().length})`], ['defi', '⏱️ Défi 60 s'], ...enabledModes().map(m => [m, MODES[m].icon + ' ' + MODES[m].label])];
+  if (S.current !== 'mix' && S.current !== 'defi' && !S.modes[S.current]) S.current = 'mix';
+  $('#modeBar').innerHTML = `<button class="chip pick" data-pick>🎯 Exercices</button>` + list.map(([k, l]) => `<button class="chip ${S.current === k ? 'on' : ''}" data-mode="${k}">${l}</button>`).join('');
+  updateSession();
+}
+/* Choix des exercices */
+function openPicker() {
+  const sh = document.createElement('div'); sh.className = 'sheet-bg';
+  sh.innerHTML = `<div class="sheet"><h2>Sur quoi tu veux travailler ?</h2><p class="muted">Coche un ou plusieurs exercices : le mode 🔀 Mix les mélange.</p>
+    ${Object.entries(GROUPS).map(([g, gl]) => `<h3>${gl}</h3>${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `
+      <label class="pk"><input type="checkbox" data-pk="${k}" ${S.modes[k] ? 'checked' : ''}><span class="pi">${m.icon}</span><span><b>${m.label}</b><small>${m.d}</small></span></label>`).join('')}`).join('')}
+    <div class="btnrow"><button class="btn light" data-pkall>Tout cocher</button><button class="btn gold" data-pkok>C’est parti</button></div></div>`;
+  document.body.appendChild(sh);
+  sh.addEventListener('click', e => {
+    if (e.target === sh || e.target.closest('[data-pkok]')) {
+      const sel = $$('[data-pk]', sh).filter(i => i.checked).map(i => i.dataset.pk);
+      if (!sel.length) return toast('Choisis au moins un exercice');
+      Object.keys(MODES).forEach(k => S.modes[k] = sel.includes(k));
+      S.current = sel.length === 1 ? sel[0] : 'mix'; save(); sh.remove(); renderModeBar(); newCard(); return;
+    }
+    if (e.target.closest('[data-pkall]')) $$('[data-pk]', sh).forEach(i => i.checked = true);
+  });
+}
+/* Défi chrono */
+let chall = null;
+function startChallenge() {
+  if (chall) clearInterval(chall.timer);
+  chall = { end: Date.now() + 60000, ok: 0, n: 0 };
+  chall.timer = setInterval(tickChallenge, 250); tickChallenge(); newCard();
+}
+function tickChallenge() {
+  if (!chall) return;
+  const left = Math.max(0, Math.ceil((chall.end - Date.now()) / 1000));
+  $('#deckHint').innerHTML = `<span class="chrono">⏱️ ${left} s · ✅ ${chall.ok}</span>`;
+  if (left <= 0) endChallenge();
+}
+function endChallenge() {
+  clearInterval(chall.timer); const r = chall; chall = null;
+  const rec = r.ok > (S.best || 0); if (rec) { S.best = r.ok; save(); }
+  $('#deck').innerHTML = `<div class="card"><div class="body endc"><div class="big">⏱️</div><h2>Défi terminé !</h2>
+    <div class="score">${r.ok}<small> bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''} sur ${r.n}</small></div>
+    <p>${rec ? '🏆 Nouveau record !' : `Record : ${S.best}`}</p>
+    <div class="btnrow"><button class="btn gold" data-mode="defi">Rejouer</button><button class="btn light" data-mode="mix">Retour au Mix</button></div></div></div>`;
+  $('#deckHint').textContent = '';
 }
 
 function newCard() {
@@ -382,7 +456,8 @@ function newCard() {
   }
   let q = null, tries = 0;
   while (!q && tries++ < 12) {
-    const modes = S.current === 'mix' ? enabledModes() : [S.current];
+    let modes = S.current === 'mix' ? enabledModes() : [S.current];
+    if (chall) { modes = QUICK.filter(m => S.modes[m]); if (!modes.length) modes = QUICK; }
     q = buildQuestion(pick(modes.length ? modes : ['suivante']));
   }
   if (!q) { deck.innerHTML = `<div class="empty">Pas assez d’ayat pour ce mode.<br>Ajoute des sourates ou change de mode.</div>`; return; }
@@ -402,7 +477,12 @@ function renderCard(c) {
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
   if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ot">${it.html}</span></div>`).join('')}</div>
     <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>✔ Valider l’ordre</button></div>`;
-  if (q.mode === 'recite') {
+  if (q.tiles) body += `${frBlock(q.target)}<div class="ref">${esc(surahName(q.target.s))} · ${q.target.s}:${q.target.a}</div>
+    <div class="ar mmline">${q.before ? q.before + ' ' : ''}<span data-mmans></span><span class="mmcur">▁▁</span>${q.after ? ' …' : ''}</div>
+    <div class="tiles">${q.tiles.map((t, i) => `<button class="tile" data-tile="${i}">${t.w}</button>`).join('')}</div>`;
+  if (q.efface) body += `<div class="lvl" data-lvl></div><div data-eff></div>${frBlock(q.target)}${refLine(q.target)}
+    <div class="btnrow" data-effbtn><button class="btn ko" data-effko>✘ J’ai bloqué</button><button class="btn ok" data-effok>✔ Je l’ai dit</button></div>`;
+  if (q.recit) {
     body += `<div class="btnrow">${SR && S.settings.voice ? `<button class="btn gold" data-mic>🎙️ Réciter</button>` : ''}<button class="btn light" data-reveal>👁️ Révéler</button></div><div class="transcript" data-tr></div>`;
   }
   body += `<div data-after></div>`;
@@ -411,12 +491,28 @@ function renderCard(c) {
     <div class="body">${body}</div>`;
   if (q.mode === 'sourate') $('.head span:last-child', el).textContent = 'Sourate ?';
   setHint(c);
-  if (q.audio && S.settings.autoplay) play(q.target);
+  if ((q.audio && S.settings.autoplay) || q.forcePlay) play(q.target);
+  if (q.efface) { c.level = 0; renderEff(c); }
+}
+/* Effacement progressif : 0 texte complet → 1 un tiers caché → 2 deux tiers → 3 premières lettres → 4 rien */
+function renderEff(c) {
+  const q = c.q, L = c.level, tk = q.target.tk, n = tk.length;
+  const hideN = L === 1 ? Math.ceil(n / 3) : L === 2 ? Math.ceil(2 * n / 3) : n;
+  const hidden = new Set(q.hideOrder.slice(0, hideN));
+  const html = tk.map((w, i) => {
+    if (L === 0 || !hidden.has(i)) return w;
+    if (L === 3) return `<span class="hid">${q.target.nw[i][0] || ''}…</span>`;
+    return `<span class="hid">${'ـ'.repeat(Math.max(2, Math.min(7, q.target.nw[i].length)))}</span>`;
+  }).join(' ');
+  $('[data-eff]', c.el).innerHTML = `<div class="ar ${arSize(q.target.ar)}">${html}</div>`;
+  const names = ['Lis', '⅓ caché', '⅔ caché', 'Initiales', 'De mémoire'];
+  $('[data-lvl]', c.el).innerHTML = names.map((nm, i) => `<span class="${i < L ? 'done' : i === L ? 'cur' : ''}">${i < L ? '★' : '☆'}<small>${nm}</small></span>`).join('');
 }
 
 function setHint(c) {
   const h = $('#deckHint');
-  if (!c.answered) h.textContent = c.q.mode === 'recite' ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Fais glisser les ayat dans le bon ordre, puis valide' : 'Choisis la bonne réponse';
+  if (chall) return tickChallenge();
+  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Fais glisser les ayat dans le bon ordre, puis valide' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -430,6 +526,7 @@ function finish(c, g, html) {
   $('[data-after]', c.el).innerHTML = out;
   grade(t, g);
   setHint(c);
+  if (chall) { chall.n++; if (g === 'ok') chall.ok++; tickChallenge(); setTimeout(() => { if (chall && currentCard === c) swipeOut(c, g === 'ok' ? 1 : -1); }, g === 'ok' ? 450 : 1100); return; }
   if (S.settings.autoplay && !c.q.audio && (g !== 'ok' || c.q.seq)) { if (c.q.seq) playSeq(c.q.seq); else play(t); }
 }
 function revealBlock(t, q) {
@@ -445,7 +542,8 @@ document.addEventListener('click', e => {
   if (b.dataset.goto) return showView(b.dataset.goto);
   if (b.dataset.playseq) { const [s, a, n] = b.dataset.playseq.split(':').map(Number); return playSeq(Array.from({ length: n }, (_, k) => aya(s, a + k))); }
   if (b.dataset.play) { const [s, a] = b.dataset.play.split(':').map(Number); return play(aya(s, a)); }
-  if (b.dataset.mode) { S.current = b.dataset.mode; save(); renderModeBar(); return newCard(); }
+  if (b.hasAttribute('data-pick')) return openPicker();
+  if (b.dataset.mode) { const m = b.dataset.mode; if (chall && m !== 'defi') { clearInterval(chall.timer); chall = null; } S.current = m; save(); renderModeBar(); return m === 'defi' ? startChallenge() : newCard(); }
   const c = currentCard; if (!c || !c.el.contains(b)) return;
   const q = c.q;
   if (b.hasAttribute('data-listen')) return play(q.target);
@@ -465,6 +563,20 @@ document.addEventListener('click', e => {
     return;
   }
   if (b.hasAttribute('data-ordcheck')) return checkOrder(c);
+  if (b.dataset.tile !== undefined && !c.answered) {
+    const t = q.tiles[+b.dataset.tile]; c.step = c.step || 0; c.err = c.err || 0;
+    if (norm(t.w) === norm(q.words[c.step])) {
+      b.disabled = true; b.classList.add('used');
+      $('[data-mmans]', c.el).insertAdjacentHTML('beforeend', (c.step ? ' ' : '') + q.words[c.step]);
+      if (++c.step === q.words.length) { $('.mmcur', c.el).remove(); finish(c, c.err === 0 ? 'ok' : c.err <= 2 ? 'mid' : 'ko'); }
+    } else { c.err++; b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 400); }
+    return;
+  }
+  if (b.hasAttribute('data-effok') && !c.answered) {
+    if (c.level < 4) { c.level++; renderEff(c); } else { c.level = 5; $('[data-effbtn]', c.el).remove(); finish(c, 'ok'); }
+    return;
+  }
+  if (b.hasAttribute('data-effko') && !c.answered) { const L = c.level; c.level = 0; renderEff(c); $('[data-effbtn]', c.el).remove(); finish(c, L >= 3 ? 'mid' : 'ko'); return; }
   if (b.hasAttribute('data-mic')) return toggleMic(c, b);
   if (b.hasAttribute('data-reveal')) return revealRecite(c);
   if (b.dataset.self) { finishSelf(c, b.dataset.self); return swipeOut(c, b.dataset.self === 'ko' ? -1 : 1); }
@@ -729,6 +841,10 @@ function renderSettings() {
   const st = S.settings;
   $('#settingsBox').innerHTML = `
   <h2>Thème</h2><div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
+  <h2>Objectif & accueil</h2><div class="set">
+    <label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
+    <label><span>Écran d’ouverture<small>Petite duaa + hadith du jour</small></span><input type="checkbox" data-set="opening" ${st.opening ? 'checked' : ''}></label>
+  </div>
   <h2>Modes de jeu</h2><div class="set">${Object.entries(MODES).map(([k, m]) => `<label>${m.icon} ${m.label}<input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>
   <h2>Options</h2><div class="set">
     <label><span>Pièges (ayat qui se ressemblent)<small>Les mauvaises réponses sont des mutashabihat</small></span><input type="checkbox" data-set="pieges" ${st.pieges ? 'checked' : ''}></label>
@@ -738,6 +854,11 @@ function renderSettings() {
     <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Aya suivante'], ['fin', 'Fin de l’aya']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
   </div>
+  <h2>Sauvegarde</h2><div class="set" style="padding:12px">
+    <p class="muted" style="margin:0 0 10px">Garde une copie de ta progression ou transfère-la sur un autre téléphone.</p>
+    <div class="btnrow" style="margin:0"><button class="btn gold" data-export>⬇️ Exporter</button><button class="btn light" data-import>⬆️ Importer</button></div>
+    <input type="file" accept=".json,application/json" data-importfile hidden>
+  </div>
   <h2>Données</h2>
   <button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>
   <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br>Version ${VERSION}</div>`;
@@ -746,10 +867,13 @@ $('#settingsBox').addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.modeT) { S.modes[t.dataset.modeT] = t.checked; if (!enabledModes().length) { S.modes[t.dataset.modeT] = true; t.checked = true; } }
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
-  if (t.dataset.sel) { S.settings[t.dataset.sel] = t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
+  if (t.dataset.sel) { S.settings[t.dataset.sel] = t.dataset.sel === 'goal' ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
+  if (t.hasAttribute('data-importfile') && t.files[0]) return importData(t.files[0]);
   save(); renderModeBar();
 });
 $('#settingsBox').addEventListener('click', e => {
+  if (e.target.closest('[data-export]')) return exportData();
+  if (e.target.closest('[data-import]')) return $('[data-importfile]').click();
   const tp = e.target.closest('[data-theme-pick]');
   if (tp) { S.settings.theme = tp.dataset.themePick; save(); applyTheme(); renderSettings(); return; }
   if (!e.target.hasAttribute('data-reset')) return;
@@ -803,6 +927,49 @@ $('#readBox').addEventListener('click', e => {
   readPlay(+el.dataset.ra);
 });
 
+/* ---------- Sauvegarde ---------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify({ app: 'muraja-a', v: VERSION, date: new Date().toISOString(), data: S })], { type: 'application/json' });
+  const name = `murajaa-sauvegarde-${today()}.json`, file = new File([blob], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: 'Sauvegarde Muraja\'a' }).catch(() => {}); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function importData(f) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const j = JSON.parse(r.result); if (j.app !== 'muraja-a' || !j.data) throw 0;
+      if (!confirm('Remplacer ta progression actuelle par cette sauvegarde ?')) return;
+      const def = defaultState(); S = { ...def, ...j.data, modes: { ...def.modes, ...j.data.modes }, settings: { ...def.settings, ...j.data.settings } };
+      save(); applyTheme(); buildPool(); renderSettings(); renderModeBar(); toast('✅ Sauvegarde importée');
+    } catch (e) { toast('Fichier de sauvegarde invalide'); }
+  };
+  r.readAsText(f);
+}
+
+/* ---------- Écran d'ouverture : duaa + hadith du jour ---------- */
+const DUAS = [[20, 25, 28], [3, 8, 8], [2, 201, 201], [14, 40, 41], [7, 23, 23], [23, 118, 118], [2, 286, 286], [25, 74, 74]];
+let HADITHS = [];
+const dayNum = () => { const d = new Date(); return Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5) + d.getFullYear() * 366; };
+async function showOpening() {
+  if (!S.settings.opening || sessionStorage.getItem('opened')) return;
+  sessionStorage.setItem('opened', '1');
+  try { if (!HADITHS.length) HADITHS = await (await fetch('data/hadiths.json')).json(); } catch (e) {}
+  const dn = dayNum(), [ds, da, db] = DUAS[dn % DUAS.length], ay = [];
+  for (let a = da; a <= db; a++) ay.push(aya(ds, a));
+  const h = HADITHS.length ? HADITHS[dn % HADITHS.length] : null;
+  const ov = document.createElement('div'); ov.className = 'opening';
+  ov.innerHTML = `<div class="op-in">
+    <img src="icons/logo-mark.svg" alt="" width="54" height="61">
+    <div class="op-basm">${BASMALA}</div>
+    <section><h3>Duaa du jour</h3><div class="ar">${ay.map(x => x.ar + ` <span class="anum">﴿${arNum(x.a)}﴾</span>`).join(' ')}</div>
+      <p class="fr">${ay.map(x => esc(x.fr)).join(' ')}</p><small>${esc(surahName(ds))} · ${ds}:${da}${db > da ? '–' + db : ''}</small></section>
+    ${h ? `<section><h3>Hadith du jour</h3><p class="hd">${esc(h.t)}</p><small>${h.src}, n° ${h.n}${h.g ? ' · ' + h.g : ''}${h.tr ? ' · traduction de l’appli' : ''}</small></section>` : ''}
+    <button class="btn gold" data-opgo>Bismillah, on commence</button></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('[data-opgo]').addEventListener('click', () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 300); });
+}
+
 /* ---------- Navigation ---------- */
 function showView(v) {
   $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-' + v));
@@ -822,5 +989,6 @@ $$('.tabs button').forEach(b => b.addEventListener('click', () => showView(b.dat
   $('#loading').remove();
   renderModeBar();
   if (S.selected.length) newCard(); else showView('surahs');
+  showOpening();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
