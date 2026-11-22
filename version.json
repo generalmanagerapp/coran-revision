@@ -1,7 +1,14 @@
 {
-  "version": "1.7.2",
+  "version": "1.7.3",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.7.3",
+      "date": "2026-11-22",
+      "notes": [
+        "Écran d'ouverture : bouton écouter sur la duaa du jour"
+      ]
+    },
     {
       "version": "1.7.2",
       "date": "2026-11-22",

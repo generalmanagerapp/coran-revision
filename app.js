@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.7.2';
+const VERSION = '1.7.3';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -986,11 +986,12 @@ async function showOpening() {
     <img src="icons/logo-mark.svg" alt="" width="54" height="61">
     <div class="op-basm">${BASMALA}</div>
     <section><h3>Duaa du jour</h3><div class="ar">${ay.map(x => x.ar + ` <span class="anum">﴿${arNum(x.a)}﴾</span>`).join(' ')}</div>
-      <p class="fr">${ay.map(x => esc(x.fr)).join(' ')}</p><small>${esc(surahName(ds))} · ${ds}:${da}${db > da ? '–' + db : ''}</small></section>
+      <p class="fr">${ay.map(x => esc(x.fr)).join(' ')}</p><small>${esc(surahName(ds))} · ${ds}:${da}${db > da ? '–' + db : ''} <button class="play" data-opplay aria-label="Écouter la duaa">${ic('volume')}</button></small></section>
     ${h ? `<section><h3>Hadith du jour</h3><p class="hd">${esc(h.t)}</p><small>${h.src}, n° ${h.n}${h.g ? ' · ' + h.g : ''}${h.tr ? ' · traduction de l’appli' : ''}</small></section>` : ''}
     <button class="btn gold" data-opgo>Bismillah, on commence</button></div>`;
   document.body.appendChild(ov);
-  ov.querySelector('[data-opgo]').addEventListener('click', () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 300); });
+  ov.querySelector('[data-opplay]').addEventListener('click', () => playSeq(ay));
+  ov.querySelector('[data-opgo]').addEventListener('click', () => { player.pause(); ov.classList.add('out'); setTimeout(() => ov.remove(), 300); });
 }
 
 /* ---------- Navigation ---------- */
