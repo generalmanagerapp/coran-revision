@@ -1,7 +1,14 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.5.1",
+      "date": "2026-11-22",
+      "notes": [
+        "Remettre en ordre : l'audio récite les 4 ayat à la suite"
+      ]
+    },
     {
       "version": "1.5.0",
       "date": "2026-11-22",

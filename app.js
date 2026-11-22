@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.5.0';
+const VERSION = '1.5.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -420,11 +420,11 @@ function finish(c, g, html) {
   $('[data-after]', c.el).innerHTML = out;
   grade(t, g);
   setHint(c);
-  if (S.settings.autoplay && !c.q.audio && g !== 'ok') play(t);
+  if (S.settings.autoplay && !c.q.audio && (g !== 'ok' || c.q.seq)) { if (c.q.seq) playSeq(c.q.seq); else play(t); }
 }
 function revealBlock(t, q) {
   let s = `<div class="reveal">`;
-  if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + refLine(q.seq[0]);
+  if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}">🔊</button></div>`;
   else s += arBlock(t.ar, 'small') + frBlock(t) + refLine(t);
   return s + `</div>`;
 }
@@ -433,6 +433,7 @@ function revealBlock(t, q) {
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.goto) return showView(b.dataset.goto);
+  if (b.dataset.playseq) { const [s, a, n] = b.dataset.playseq.split(':').map(Number); return playSeq(Array.from({ length: n }, (_, k) => aya(s, a + k))); }
   if (b.dataset.play) { const [s, a] = b.dataset.play.split(':').map(Number); return play(aya(s, a)); }
   if (b.dataset.mode) { S.current = b.dataset.mode; save(); renderModeBar(); return newCard(); }
   const c = currentCard; if (!c || !c.el.contains(b)) return;
