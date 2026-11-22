@@ -1,7 +1,7 @@
 /* Révision Coran — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.3.0';
+const VERSION = '1.3.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -462,27 +462,43 @@ let recog = null;
 function toggleMic(c, btn) {
   if (recog) { recog.stop(); return; }
   if (!SR) return;
-  recog = new SR(); recog.lang = 'ar-SA'; recog.interimResults = true; recog.continuous = true; recog.maxAlternatives = 1;
+  recog = new SR(); recog.lang = 'ar-SA'; recog.interimResults = true; recog.maxAlternatives = 1;
+  // Chrome Android renvoie des résultats cumulés en mode continu → doublons
+  recog.continuous = !/Android/i.test(navigator.userAgent);
   const trEl = $('[data-tr]', c.el); let text = '';
   btn.classList.add('rec'); btn.textContent = '⏹️ Stop';
   player.pause();
-  recog.onresult = ev => { text = [...ev.results].map(r => r[0].transcript).join(' '); trEl.textContent = text; };
+  recog.onresult = ev => { text = cleanTranscript([...ev.results].map(r => r[0].transcript)); trEl.textContent = text; };
   recog.onerror = ev => { trEl.textContent = ev.error === 'not-allowed' ? 'Micro refusé — utilise « Révéler ».' : 'Erreur micro : ' + ev.error; };
   recog.onend = () => { recog = null; btn.classList.remove('rec'); btn.textContent = '🎙️ Réessayer'; if (text.trim()) scoreRecite(c, text); };
   try { recog.start(); } catch (e) { recog = null; }
+}
+function cleanTranscript(segs) {
+  const parts = [];
+  for (let t of segs) {
+    t = t.trim(); if (!t) continue;
+    const last = parts[parts.length - 1];
+    if (last && t.startsWith(last)) parts[parts.length - 1] = t;      // résultat cumulé
+    else if (last && last.startsWith(t)) continue;
+    else if (!parts.some(p => p.includes(t))) parts.push(t);
+  }
+  const w = parts.join(' ').split(/\s+/).filter(Boolean);
+  return w.filter((x, i) => i === 0 || norm(x) !== norm(w[i - 1])).join(' ');   // mots répétés à la suite
 }
 function scoreRecite(c, text) {
   const exp = c.q.expected, got = text.split(/\s+/).filter(Boolean);
   const hit = lcsMatch(exp, got);
   const denom = Math.min(exp.length, Math.max(6, Math.ceil(got.length * 1.15)));
   const nHit = hit.slice(0, denom).filter(Boolean).length;
-  const ratio = Math.min(1, nHit / denom);
+  const recall = Math.min(1, nHit / denom), precision = got.length ? Math.min(1, nHit / got.length) : 0;
+  // les mots en trop font baisser le score (moyenne harmonique)
+  const ratio = recall && precision ? 2 * recall * precision / (recall + precision) : 0;
   const g = ratio >= .8 ? 'ok' : ratio >= .5 ? 'mid' : 'ko';
   const shown = exp.map((w, i) => `<span class="${i < denom ? (hit[i] ? 'w-ok' : 'w-ko') : ''}">${w}</span>`).join(' ');
   const pre = c.q.sub === 'fin' ? c.q.target.tk.slice(0, c.q.startLen).join(' ') + ' ' : '';
   const t = c.q.target;
   c.answered = true; c.selfEval = true; c.suggested = g;
-  $('[data-after]', c.el).innerHTML = `<div class="result ${g}">${{ ok: '✅', mid: '🟠', ko: '❌' }[g]} ${Math.round(ratio * 100)} % de mots reconnus</div>
+  $('[data-after]', c.el).innerHTML = `<div class="result ${g}">${{ ok: '✅', mid: '🟠', ko: '❌' }[g]} ${Math.round(ratio * 100)} % de correspondance</div>
     <div class="reveal"><div class="ar ${arSize(t.ar)}">${pre}${shown}</div>${frBlock(t)}${refLine(t)}</div>${selfButtons()}`;
   setHint(c);
 }
