@@ -1,7 +1,7 @@
 /* Révision Coran — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -34,6 +34,26 @@ const RECITERS = {
 // Début de chaque juz [sourate, aya]
 const JUZ = [[1,1],[2,142],[2,253],[3,93],[4,24],[4,148],[5,83],[6,111],[7,88],[8,41],[9,93],[11,6],[12,53],[15,1],[17,1],[18,75],[21,1],[23,1],[25,21],[27,56],[29,46],[33,31],[36,28],[39,32],[41,47],[46,1],[51,31],[58,1],[67,1],[78,1]];
 const juzOf = (s, a) => { let j = 1; for (let i = 0; i < JUZ.length; i++) { const [js, ja] = JUZ[i]; if (s > js || (s === js && a >= ja)) j = i + 1; } return j; };
+const THEMES = {
+  emeraude:  { name: 'Émeraude & or',  sw: ['#0b1f19', '#fbf7ee', '#c9a24a'], meta: '#0f2a22' },
+  manuscrit: { name: 'Manuscrit',      sw: ['#efe2c4', '#f8efd9', '#9b2c1f'], meta: '#e6d5ae', font: 'Cormorant+Garamond:wght@500;600;700' },
+  minimal:   { name: 'Minimal clair',  sw: ['#f5f5f7', '#ffffff', '#1d4fd8'], meta: '#f5f5f7', font: 'Inter:wght@400;600;700' },
+  nuit:      { name: 'Nuit étoilée',   sw: ['#0d1033', '#171b4a', '#f4e3a1'], meta: '#0d1033', font: 'Nunito:wght@400;600;800' },
+  ludique:   { name: 'Ludique',        sw: ['#eafaf3', '#ffffff', '#16a36b'], meta: '#eafaf3', font: 'Baloo+2:wght@500;700;800' },
+  desert:    { name: 'Sable du désert', sw: ['#f3e3c7', '#fffaf1', '#b8561b'], meta: '#f3e3c7', font: 'Lora:wght@500;600;700' },
+  medina:    { name: 'Médina bleue',   sw: ['#dbe9fb', '#ffffff', '#2d6cdf'], meta: '#2d6cdf', font: 'Quicksand:wght@500;600;700' },
+  oled:      { name: 'Noir OLED',      sw: ['#000000', '#0d0d0d', '#7dff9b'], meta: '#000000', font: 'Inter:wght@400;600&family=JetBrains+Mono:wght@500;700' },
+};
+function applyTheme() {
+  const t = THEMES[S.settings.theme] ? S.settings.theme : 'emeraude', th = THEMES[t];
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name=theme-color]').setAttribute('content', th.meta);
+  let l = document.getElementById('themeFont');
+  if (th.font) {
+    if (!l) { l = document.createElement('link'); l.id = 'themeFont'; l.rel = 'stylesheet'; document.head.appendChild(l); }
+    l.href = `https://fonts.googleapis.com/css2?family=${th.font}&display=swap`;
+  } else if (l) l.remove();
+}
 const SRS_STEPS = [60e3, 10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e5, 90 * 864e5];
 
 /* ---------- State ---------- */
@@ -41,7 +61,7 @@ const defaultState = () => ({
   selected: [],
   modes: { suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, recite: true, ecoute: true },
   current: 'mix',
-  settings: { trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true },
+  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
@@ -50,6 +70,7 @@ function load() {
   return defaultState();
 }
 const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(S));
+applyTheme();
 
 /* ---------- Data ---------- */
 let SURAHS = [], AYAS = [], AYA_IDX = new Map(), INV = new Map(), DF = new Map();
@@ -583,6 +604,7 @@ function renderStats() {
 function renderSettings() {
   const st = S.settings;
   $('#settingsBox').innerHTML = `
+  <h2>Thème</h2><div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
   <h2>Modes de jeu</h2><div class="set">${Object.entries(MODES).map(([k, m]) => `<label>${m.icon} ${m.label}<input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>
   <h2>Options</h2><div class="set">
     <label><span>Pièges (ayat qui se ressemblent)<small>Les mauvaises réponses sont des mutashabihat</small></span><input type="checkbox" data-set="pieges" ${st.pieges ? 'checked' : ''}></label>
@@ -604,6 +626,8 @@ $('#settingsBox').addEventListener('change', e => {
   save(); renderModeBar();
 });
 $('#settingsBox').addEventListener('click', e => {
+  const tp = e.target.closest('[data-theme-pick]');
+  if (tp) { S.settings.theme = tp.dataset.themePick; save(); applyTheme(); renderSettings(); return; }
   if (!e.target.hasAttribute('data-reset')) return;
   if (!confirm('Effacer tout le suivi de révision ?')) return;
   Object.assign(S, { srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 } }); save(); renderSettings();
