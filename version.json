@@ -1,7 +1,14 @@
 {
-  "version": "1.6.1",
+  "version": "1.6.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.6.2",
+      "date": "2026-11-22",
+      "notes": [
+        "Moins de répétitions : une aya vue récemment n'est plus reproposée tout de suite, une aya réussie revient le lendemain"
+      ]
+    },
     {
       "version": "1.6.1",
       "date": "2026-11-22",

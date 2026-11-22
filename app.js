@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.6.1';
+const VERSION = '1.6.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -64,7 +64,7 @@ function applyTheme() {
     l.href = `https://fonts.googleapis.com/css2?family=${th.font}&display=swap`;
   } else if (l) l.remove();
 }
-const SRS_STEPS = [60e3, 10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e5, 90 * 864e5];
+const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e5, 90 * 864e5, 180 * 864e5];
 
 /* ---------- State ---------- */
 const defaultState = () => ({
@@ -76,6 +76,7 @@ const defaultState = () => ({
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
+if (!S.srsV2) { for (const k in S.srs) { const r = S.srs[k]; if (r.b > 0) r.b = Math.max(1, r.b - 1); } S.srsV2 = 1; }
 if (S.ranges) { S.iv = S.iv || {}; for (const k in S.ranges) S.iv[k] = [S.ranges[k]]; delete S.ranges; }
 function load() {
   try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d) { const def = defaultState(); return { ...def, ...d, modes: { ...def.modes, ...d.modes }, settings: { ...def.settings, ...d.settings } }; } } catch (e) {}
@@ -186,9 +187,19 @@ function buildPool() { POOL = AYAS.filter(inSel); POOL_IDS = new Set(POOL.map(a 
 const inPool = a => !!a && POOL_IDS.has(a.id);
 const rec = a => S.srs[a.s + ':' + a.a];
 
-function pickTarget(filter) {
-  const cand = POOL.filter(filter);
+// ayat vues récemment : on évite de les reproposer tout de suite
+const recent = [];
+function rememberCard(q) {
+  for (const a of [q.target, q.show, ...(q.seq || [])]) if (a) { const i = recent.indexOf(a.id); if (i >= 0) recent.splice(i, 1); recent.push(a.id); }
+  const max = Math.max(3, Math.min(60, Math.floor(POOL.length * 0.7)));
+  while (recent.length > max) recent.shift();
+}
+function pickTarget(filter, tgt = a => a) {
+  let cand = POOL.filter(filter);
   if (!cand.length) return null;
+  const rs = new Set(recent), near = a => { const t = tgt(a); return rs.has(a.id) || rs.has(t.id) || (next(a) && rs.has(next(a).id)) || (prev(a) && rs.has(prev(a).id)); };
+  const c1 = cand.filter(a => !near(a)), c2 = cand.filter(a => !rs.has(a.id) && !rs.has(tgt(a).id));
+  cand = c1.length ? c1 : c2.length ? c2 : cand;
   const now = Date.now();
   const due = cand.filter(a => { const r = rec(a); return r && r.d <= now; }).sort((x, y) => rec(x).d - rec(y).d);
   const fresh = cand.filter(a => !rec(a));
@@ -263,7 +274,7 @@ function buildQuestion(mode) {
   switch (mode) {
     case 'suivante': case 'precedente': {
       const isNext = mode === 'suivante';
-      const x = pickTarget(a => isNext ? inPool(next(a)) : inPool(prev(a))); if (!x) return null;
+      const x = pickTarget(a => isNext ? inPool(next(a)) : inPool(prev(a)), a => isNext ? next(a) : prev(a)); if (!x) return null;
       const ans = isNext ? next(x) : prev(x);
       // si l'aya affichée existe ailleurs à l'identique, ce qui la suit là-bas est aussi juste → on l'écarte des leurres
       const valid = new Set(sameText(x).map(y => isNext ? next(y) : prev(y)).filter(Boolean).map(tkey));
@@ -330,7 +341,7 @@ function buildQuestion(mode) {
     case 'recite': {
       let t = S.settings.reciteType; if (t === 'mix') t = Math.random() < .5 ? 'suite' : 'fin';
       if (t === 'suite') {
-        const x = pickTarget(a => inPool(next(a))); if (!x) return null;
+        const x = pickTarget(a => inPool(next(a)), next); if (!x) return null;
         return { mode, recit: true, sub: 'suite', target: next(x), show: x, prompt: 'Récite l’aya suivante', expected: next(x).tk };
       }
       const x = pickTarget(a => a.tk.length >= 4); if (!x) return null;
@@ -464,6 +475,7 @@ function newCard() {
   const back = document.createElement('div'); back.className = 'card back'; deck.appendChild(back);
   const card = document.createElement('div'); card.className = 'card'; deck.appendChild(card);
   currentCard = { q, el: card, answered: false, g: null };
+  rememberCard(q);
   renderCard(currentCard);
   attachOrderDrag(currentCard);
   attachSwipe(currentCard);
