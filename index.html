@@ -30,6 +30,7 @@
 
     <!-- SOURATES -->
     <section id="view-surahs" class="view">
+      <div class="seg"><button data-tab="s" class="on">Sourates</button><button data-tab="j">Juz</button><button data-tab="h">Hizb</button></div>
       <div class="toolbar">
         <input id="surahSearch" type="search" placeholder="Rechercher une sourate…">
       </div>
@@ -42,6 +43,21 @@
       <div id="surahList"></div>
     </section>
 
+    <!-- LIRE -->
+    <section id="view-read" class="view">
+      <div class="rbar">
+        <button data-rnav="-1" aria-label="Sourate précédente">‹</button>
+        <select id="readSel" aria-label="Sourate"></select>
+        <button data-rnav="1" aria-label="Sourate suivante">›</button>
+      </div>
+      <div class="rctl">
+        <button id="rPlay" class="btn gold">▶︎ Écouter</button>
+        <button id="rRep" class="btn light" aria-pressed="false">🔁 Répéter l’aya</button>
+        <button id="rMask" class="btn light" aria-pressed="false">🙈 Masquer</button>
+      </div>
+      <div id="readBox"></div>
+    </section>
+
     <!-- STATS -->
     <section id="view-stats" class="view"><div id="statsBox"></div></section>
 
@@ -51,7 +67,8 @@
 
   <nav class="tabs">
     <button data-view="revise" class="on"><span>🃏</span>Réviser</button>
-    <button data-view="surahs"><span>📖</span>Sourates</button>
+    <button data-view="read"><span>📖</span>Lire</button>
+    <button data-view="surahs"><span>✅</span>Sourates</button>
     <button data-view="stats"><span>📊</span>Suivi</button>
     <button data-view="settings"><span>⚙️</span>Réglages</button>
   </nav>

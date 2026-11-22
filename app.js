@@ -1,7 +1,7 @@
 /* Révision Coran — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -24,15 +24,19 @@ const MODES = {
   ecoute:     { label: 'Écoute',         icon: '🎧' },
 };
 const RECITERS = {
-  'Alafasy_128kbps': 'Mishary Alafasy',
-  'Abdul_Basit_Murattal_192kbps': 'Abdul Basit (murattal)',
-  'Husary_128kbps': 'Mahmoud Al-Husary',
-  'Minshawy_Murattal_128kbps': 'Al-Minshawi (murattal)',
-  'Abdurrahmaan_As-Sudais_192kbps': 'Abdurrahman As-Sudais',
-  'MaherAlMuaiqly128kbps': 'Maher Al-Muaiqly',
+  'Alafasy_128kbps': { n: 'Mishary Alafasy', d: ['Alafasy_128kbps'] },
+  'Ghamadi_40kbps': { n: 'Saad Al-Ghamidi', d: ['Ghamadi_40kbps'] },
+  'Saood_ash-Shuraym_128kbps': { n: 'Saoud Ash-Shuraim', d: ['Saood_ash-Shuraym_128kbps', 'Saood_ash-Shuraym_64kbps'] },
+  'Ayman_Sowaid_64kbps': { n: 'Ayman Suwaid', d: ['Ayman_Sowaid_64kbps'] },
+  'Abdul_Basit_Murattal_192kbps': { n: 'Abdul Basit (murattal)', d: ['Abdul_Basit_Murattal_192kbps'] },
+  'Husary_128kbps': { n: 'Mahmoud Al-Husary', d: ['Husary_128kbps'] },
+  'Minshawy_Murattal_128kbps': { n: 'Al-Minshawi (murattal)', d: ['Minshawy_Murattal_128kbps'] },
+  'Abdurrahmaan_As-Sudais_192kbps': { n: 'Abdurrahman As-Sudais', d: ['Abdurrahmaan_As-Sudais_192kbps'] },
+  'MaherAlMuaiqly128kbps': { n: 'Maher Al-Muaiqly', d: ['MaherAlMuaiqly128kbps'] },
 };
 // Début de chaque juz [sourate, aya]
-const JUZ = [[1,1],[2,142],[2,253],[3,93],[4,24],[4,148],[5,83],[6,111],[7,88],[8,41],[9,93],[11,6],[12,53],[15,1],[17,1],[18,75],[21,1],[23,1],[25,21],[27,56],[29,46],[33,31],[36,28],[39,32],[41,47],[46,1],[51,31],[58,1],[67,1],[78,1]];
+const JUZ = [[1,1],[2,142],[2,253],[3,93],[4,24],[4,148],[5,82],[6,111],[7,88],[8,41],[9,93],[11,6],[12,53],[15,1],[17,1],[18,75],[21,1],[23,1],[25,21],[27,56],[29,46],[33,31],[36,28],[39,32],[41,47],[46,1],[51,31],[58,1],[67,1],[78,1]];
+const HIZB = [[1,1],[2,75],[2,142],[2,203],[2,253],[3,15],[3,93],[3,171],[4,24],[4,88],[4,148],[5,27],[5,82],[6,36],[6,111],[7,1],[7,88],[7,171],[8,41],[9,34],[9,93],[10,26],[11,6],[11,84],[12,53],[13,19],[15,1],[16,51],[17,1],[17,99],[18,75],[20,1],[21,1],[22,1],[23,1],[24,21],[25,21],[26,111],[27,56],[28,51],[29,46],[31,22],[33,31],[34,24],[36,28],[37,145],[39,32],[40,41],[41,47],[43,24],[46,1],[48,18],[51,31],[55,1],[58,1],[62,1],[67,1],[72,1],[78,1],[87,1]];
 const juzOf = (s, a) => { let j = 1; for (let i = 0; i < JUZ.length; i++) { const [js, ja] = JUZ[i]; if (s > js || (s === js && a >= ja)) j = i + 1; } return j; };
 const THEMES = {
   emeraude:  { name: 'Émeraude & or',  sw: ['#0b1f19', '#fbf7ee', '#c9a24a'], meta: '#0f2a22' },
@@ -65,6 +69,7 @@ const defaultState = () => ({
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
+if (S.ranges) { S.iv = S.iv || {}; for (const k in S.ranges) S.iv[k] = [S.ranges[k]]; delete S.ranges; }
 function load() {
   try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d) { const def = defaultState(); return { ...def, ...d, modes: { ...def.modes, ...d.modes }, settings: { ...def.settings, ...d.settings } }; } } catch (e) {}
   return defaultState();
@@ -143,8 +148,28 @@ function similar(target, n = 3, opts = {}) {
 
 /* ---------- Pool & SRS ---------- */
 let POOL = [];
-const range = s => { const r = (S.ranges || {})[s], n = SURAHS[s - 1].count; return r ? [Math.max(1, Math.min(r[0], n)), Math.max(1, Math.min(r[1], n))] : [1, n]; };
-const inSel = a => { if (!S.selected.includes(a.s)) return false; const [f, t] = range(a.s); return a.a >= f && a.a <= t; };
+// sélection : sourates cochées + plages d'ayat (S.iv[s] = [[de, à], …], absent = sourate entière)
+function ivOf(s) { if (!S.selected.includes(s)) return []; return (S.iv && S.iv[s]) || [[1, SURAHS[s - 1].count]]; }
+function setIv(s, list) {
+  const n = SURAHS[s - 1].count; S.iv = S.iv || {};
+  list = list.map(([f, t]) => [Math.max(1, Math.min(f, t)), Math.min(n, Math.max(f, t))]).filter(([f, t]) => f <= t).sort((x, y) => x[0] - y[0]);
+  const m = []; for (const r of list) { const l = m[m.length - 1]; if (l && r[0] <= l[1] + 1) l[1] = Math.max(l[1], r[1]); else m.push(r.slice()); }
+  if (!m.length) { S.selected = S.selected.filter(x => x !== s); delete S.iv[s]; return; }
+  if (!S.selected.includes(s)) S.selected = [...S.selected, s].sort((a, b) => a - b);
+  if (m.length === 1 && m[0][0] === 1 && m[0][1] === n) delete S.iv[s]; else S.iv[s] = m;
+}
+function subIv(list, f, t) { const out = []; for (const [a, b] of list) { if (b < f || a > t) out.push([a, b]); else { if (a < f) out.push([a, f - 1]); if (b > t) out.push([t + 1, b]); } } return out; }
+const range = s => { const l = ivOf(s); return l.length ? [l[0][0], l[l.length - 1][1]] : [1, SURAHS[s - 1].count]; };
+const inSel = a => ivOf(a.s).some(([f, t]) => a.a >= f && a.a <= t);
+// juz / hizb : étendues d'ayat (index dans AYAS)
+function divSpans(list) { return list.map(([s, a], i) => [aya(s, a).id, i + 1 < list.length ? aya(...list[i + 1]).id - 1 : AYAS.length - 1]); }
+function spanCount(st, en) { let k = 0; for (let i = st; i <= en; i++) if (inSel(AYAS[i])) k++; return k; }
+function toggleSpan(st, en, forceAdd) {
+  const full = !forceAdd && spanCount(st, en) === en - st + 1;
+  const per = {}; for (let i = st; i <= en; i++) { const a = AYAS[i]; const p = per[a.s] || (per[a.s] = [a.a, a.a]); p[1] = a.a; }
+  for (const k in per) { const s2 = +k, [f, t] = per[k]; setIv(s2, full ? subIv(ivOf(s2), f, t) : [...ivOf(s2), [f, t]]); }
+  save(); buildPool(); renderSurahs();
+}
 let POOL_IDS = new Set();
 function buildPool() { POOL = AYAS.filter(inSel); POOL_IDS = new Set(POOL.map(a => a.id)); }
 const inPool = a => !!a && POOL_IDS.has(a.id);
@@ -181,8 +206,18 @@ function grade(a, g) { // g: 'ok' | 'mid' | 'ko'
 
 /* ---------- Audio ---------- */
 const player = new Audio();
-function audioUrl(a) { return `https://everyayah.com/data/${S.settings.reciter}/${pad3(a.s)}${pad3(a.a)}.mp3`; }
-function play(a, then) { player.pause(); player.src = audioUrl(a); player.onended = then || null; player.play().catch(() => {}); }
+const dirIdx = {};
+function recDirs() { return (RECITERS[S.settings.reciter] || RECITERS.Alafasy_128kbps).d; }
+function audioUrl(a, k) { return `https://everyayah.com/data/${recDirs()[k]}/${pad3(a.s)}${pad3(a.a)}.mp3`; }
+function play(a, then, fromReader) {
+  if (!fromReader && typeof readStop === 'function') readStop();
+  player.pause();
+  let k = dirIdx[S.settings.reciter] || 0;
+  const tryK = () => { player.src = audioUrl(a, k); player.play().catch(() => {}); };
+  player.onerror = () => { const n = recDirs().length; if (k + 1 < n) { k++; dirIdx[S.settings.reciter] = k; tryK(); } else toast('Audio indisponible pour ce récitateur'); };
+  player.onended = then || null; tryK();
+}
+function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2500); }
 function playSeq(list) { let i = 0; const go = () => { if (i < list.length) play(list[i++], go); }; go(); }
 
 /* ---------- Helpers d'affichage ---------- */
@@ -504,11 +539,17 @@ function swipeOut(c, dir) {
 
 /* ---------- Sourates ---------- */
 function surahMastery(s) {
-  const [f, t] = range(s); let m = 0;
-  for (let a = f; a <= t; a++) { const r = S.srs[s + ':' + a]; if (r && r.b >= 4) m++; }
-  return m / (t - f + 1);
+  let m = 0, n = 0;
+  for (const [f, t] of ivOf(s)) for (let a = f; a <= t; a++) { n++; const r = S.srs[s + ':' + a]; if (r && r.b >= 4) m++; }
+  return n ? m / n : 0;
 }
+let selTab = 's';
 function renderSurahs() {
+  $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.tab === selTab));
+  $('.toolbar').style.display = selTab === 's' ? '' : 'none';
+  const nA = POOL.length;
+  $('#selCount').textContent = `${S.selected.length} sourate${S.selected.length > 1 ? 's' : ''} · ${nA} ayat en révision`;
+  if (selTab !== 's') return renderDivs();
   const q = $('#surahSearch').value.trim().toLowerCase();
   const sel = new Set(S.selected);
   const groups = {};
@@ -521,28 +562,42 @@ function renderSurahs() {
       <span class="n">${s.i}</span><span class="t"><b>${esc(s.tr)}</b><small>${esc(s.fr)} · ${s.count} ayat</small></span>
       ${sel.has(s.i) ? `<span class="m" title="maîtrise"><i style="width:${Math.round(surahMastery(s.i) * 100)}%"></i></span>` : ''}
       <span class="a">${s.ar}</span></label>${sel.has(s.i) && s.count > 1 ? rangeRow(s) : ''}`).join('')}</div>`).join('');
-  const nA = POOL.length;
-  $('#selCount').textContent = `${S.selected.length} sourate${S.selected.length > 1 ? 's' : ''} cochée${S.selected.length > 1 ? 's' : ''} · ${nA} ayat en révision`;
+  $$('#surahList input[data-s]').forEach(i => { const s2 = +i.dataset.s, l = ivOf(s2); i.indeterminate = l.length && (l.length > 1 || l[0][0] !== 1 || l[0][1] !== SURAHS[s2 - 1].count); });
+}
+function renderDivs() {
+  const isJ = selTab === 'j', list = isJ ? JUZ : HIZB, spans = divSpans(list);
+  const tiles = spans.map(([st, en], i) => {
+    const k = spanCount(st, en), tot = en - st + 1, cls = k === tot ? 'full' : k ? 'part' : '';
+    const a = AYAS[st];
+    return `<button class="dv ${cls}" data-span="${st}-${en}"><b>${isJ ? 'Juz' : 'Hizb'} ${i + 1}</b><small>${esc(surahName(a.s))} ${a.a}</small>${k && k < tot ? `<i>${Math.round(100 * k / tot)} %</i>` : ''}</button>`;
+  });
+  if (isJ) $('#surahList').innerHTML = `<div class="dgrid">${tiles.join('')}</div>`;
+  else { let h = ''; for (let j = 0; j < 30; j++) h += `<div class="juz"><h3>Juz ${j + 1}</h3><div class="dgrid two">${tiles[2 * j]}${tiles[2 * j + 1]}</div></div>`; $('#surahList').innerHTML = h; }
 }
 function rangeRow(s) {
-  const [f, t] = range(s.i), all = f === 1 && t === s.count;
+  const [f, t] = range(s.i), l = ivOf(s.i), nSel = l.reduce((x, [a, b]) => x + b - a + 1, 0), all = nSel === s.count;
   return `<div class="range"><span>Ayat</span><input type="number" inputmode="numeric" min="1" max="${s.count}" value="${f}" data-rf="${s.i}" aria-label="Première aya">
     <span>à</span><input type="number" inputmode="numeric" min="1" max="${s.count}" value="${t}" data-rt="${s.i}" aria-label="Dernière aya">
-    <span class="rn">${t - f + 1}/${s.count}</span>${all ? '' : `<button data-rall="${s.i}">Toutes</button>`}</div>`;
+    <span class="rn">${l.length > 1 ? l.map(([a, b]) => a === b ? a : a + '–' + b).join(', ') + ' · ' : ''}${nSel}/${s.count}</span>${all ? '' : `<button data-rall="${s.i}">Toutes</button>`}</div>`;
 }
 function setRange(s, f, t) {
-  const n = SURAHS[s - 1].count; f = Math.max(1, Math.min(+f || 1, n)); t = Math.max(1, Math.min(+t || n, n)); if (f > t) [f, t] = [t, f];
-  S.ranges = S.ranges || {}; if (f === 1 && t === n) delete S.ranges[s]; else S.ranges[s] = [f, t];
+  const n = SURAHS[s - 1].count; setIv(s, [[Math.max(1, Math.min(+f || 1, n)), Math.max(1, Math.min(+t || n, n))]]);
   save(); buildPool(); renderSurahs();
 }
-function setSelected(list) { S.selected = [...new Set(list)].sort((a, b) => a - b); save(); buildPool(); renderSurahs(); }
+function setSelected(list) {
+  S.selected = [...new Set(list)].sort((a, b) => a - b);
+  if (S.iv) for (const k in S.iv) if (!S.selected.includes(+k)) delete S.iv[k];
+  save(); buildPool(); renderSurahs();
+}
 $('#surahList').addEventListener('change', e => {
   const d = e.target.dataset;
   if (d.rf || d.rt) { const s = +(d.rf || d.rt), [f, t] = range(s); return setRange(s, d.rf ? e.target.value : f, d.rt ? e.target.value : t); }
   const s = +d.s; if (!s) return;
   setSelected(e.target.checked ? [...S.selected, s] : S.selected.filter(x => x !== s));
 });
+$$('.seg button').forEach(b => b.addEventListener('click', () => { selTab = b.dataset.tab; renderSurahs(); }));
 $('#surahList').addEventListener('click', e => {
+  const dv = e.target.closest('[data-span]'); if (dv) { const [st, en] = dv.dataset.span.split('-').map(Number); return toggleSpan(st, en); }
   if (e.target.dataset.rall) return setRange(+e.target.dataset.rall, 1, 1e9);
   const j = e.target.dataset.juz; if (!j) return; e.preventDefault();
   const ids = SURAHS.filter(s => s.juz === +j).map(s => s.i);
@@ -553,8 +608,8 @@ $('#surahSearch').addEventListener('input', renderSurahs);
 $$('.quick button').forEach(b => b.addEventListener('click', () => {
   const k = b.dataset.quick;
   if (k === 'none') return setSelected([]);
-  const ids = SURAHS.filter(s => s.juz === (k === 'amma' ? 30 : 29)).map(s => s.i);
-  setSelected([...S.selected, ...ids]);
+  const [st, en] = divSpans(JUZ)[k === 'amma' ? 29 : 28];
+  toggleSpan(st, en, true);
 }));
 
 /* ---------- Suivi ---------- */
@@ -586,8 +641,8 @@ function renderStats() {
   html += `</div>`;
   // par sourate
   const rows = S.selected.map(s => {
-    const [f, t] = range(s), n = t - f + 1; let m = 0, l = 0, w = 0;
-    for (let a = f; a <= t; a++) { const r = S.srs[s + ':' + a]; if (!r) continue; if (r.b >= 4) m++; else if (r.b >= 2) l++; else w++; }
+    let n = 0, m = 0, l = 0, w = 0;
+    for (const [f, t] of ivOf(s)) for (let a = f; a <= t; a++) { n++; const r = S.srs[s + ':' + a]; if (!r) continue; if (r.b >= 4) m++; else if (r.b >= 2) l++; else w++; }
     const st = S.surah[s] || { n: 0, ok: 0 };
     return { s, n, m, l, w, rate: st.n ? st.ok / st.n : null };
   }).sort((a, b) => (a.rate ?? 2) - (b.rate ?? 2));
@@ -612,7 +667,7 @@ function renderSettings() {
     <label><span>Lecture audio automatique<small>Mode écoute + correction</small></span><input type="checkbox" data-set="autoplay" ${st.autoplay ? 'checked' : ''}></label>
     <label><span>Reconnaissance vocale<small>${SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation'}</small></span><input type="checkbox" data-set="voice" ${st.voice ? 'checked' : ''} ${SR ? '' : 'disabled'}></label>
     <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Aya suivante'], ['fin', 'Fin de l’aya']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, l]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
   </div>
   <h2>Données</h2>
   <button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>
@@ -633,6 +688,52 @@ $('#settingsBox').addEventListener('click', e => {
   Object.assign(S, { srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 } }); save(); renderSettings();
 });
 
+
+/* ---------- Lecture ---------- */
+const BASMALA = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
+const arNum = n => n.toLocaleString('ar-EG');
+let readS = 1, readCur = 0, readOn = false, readRep = false, readMask = false;
+function renderRead() {
+  readS = S.settings.readS || 1;
+  const sel = $('#readSel');
+  if (!sel.options.length) sel.innerHTML = SURAHS.map(x => `<option value="${x.i}">${x.i}. ${esc(x.tr)} — ${x.ar}</option>`).join('');
+  sel.value = readS;
+  const su = SURAHS[readS - 1];
+  let h = `<div class="rhead"><div class="ar">${su.ar}</div><div>${esc(su.tr)} · ${esc(su.fr)}</div><small>${su.count} ayat · ${su.type === 'm' ? 'mecquoise' : 'médinoise'}</small></div>`;
+  if (readS !== 1 && readS !== 9) h += `<div class="ar basm">${BASMALA}</div>`;
+  for (let a = 1; a <= su.count; a++) {
+    const x = aya(readS, a);
+    h += `<div class="ra" data-ra="${a}"><div class="ar">${x.ar} <span class="anum">﴿${arNum(a)}﴾</span></div>${S.settings.trad ? `<div class="fr">${a}. ${esc(x.fr)}</div>` : ''}</div>`;
+  }
+  $('#readBox').innerHTML = h;
+  $('#readBox').classList.toggle('masked', readMask);
+  markRead();
+}
+function markRead() {
+  $$('#readBox .ra').forEach(el => el.classList.toggle('cur', readOn && +el.dataset.ra === readCur));
+  $('#rPlay').textContent = readOn ? '⏸ Pause' : '▶︎ Écouter';
+  $('#rRep').setAttribute('aria-pressed', readRep); $('#rRep').classList.toggle('gold', readRep);
+  $('#rMask').setAttribute('aria-pressed', readMask); $('#rMask').classList.toggle('gold', readMask);
+}
+function readPlay(a) {
+  const n = SURAHS[readS - 1].count;
+  if (a > n) { readOn = false; markRead(); return; }
+  readCur = a; readOn = true; markRead();
+  const el = $(`#readBox .ra[data-ra="${a}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  play(aya(readS, a), () => readPlay(readRep ? a : a + 1), true);
+}
+function readStop() { if (!readOn) return; readOn = false; player.pause(); markRead(); }
+$('#readSel').addEventListener('change', e => { readStop(); S.settings.readS = +e.target.value; save(); renderRead(); $('#view-read').scrollTop = 0; });
+$$('[data-rnav]').forEach(b => b.addEventListener('click', () => { const v = Math.min(114, Math.max(1, (S.settings.readS || 1) + +b.dataset.rnav)); readStop(); S.settings.readS = v; save(); renderRead(); $('#view-read').scrollTop = 0; }));
+$('#rPlay').addEventListener('click', () => { if (readOn) readStop(); else readPlay(readCur || 1); });
+$('#rRep').addEventListener('click', () => { readRep = !readRep; markRead(); });
+$('#rMask').addEventListener('click', () => { readMask = !readMask; $('#readBox').classList.toggle('masked', readMask); $$('#readBox .ra.shown').forEach(x => x.classList.remove('shown')); markRead(); });
+$('#readBox').addEventListener('click', e => {
+  const el = e.target.closest('.ra'); if (!el) return;
+  if (readMask && !el.classList.contains('shown')) { el.classList.add('shown'); return; }
+  readPlay(+el.dataset.ra);
+});
+
 /* ---------- Navigation ---------- */
 function showView(v) {
   $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-' + v));
@@ -640,6 +741,7 @@ function showView(v) {
   if (v === 'surahs') renderSurahs();
   if (v === 'stats') renderStats();
   if (v === 'settings') renderSettings();
+  if (v === 'read') renderRead();
   if (v === 'revise') { renderModeBar(); if (!currentCard || currentCard.out || currentCard.answered || !$('#deck .card')) newCard(); }
 }
 $$('.tabs button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));

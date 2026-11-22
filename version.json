@@ -1,7 +1,16 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.3.0",
+      "date": "2026-11-22",
+      "notes": [
+        "Lecture des sourates (audio aya par aya, répétition, mode masqué)",
+        "Sélection par juz et par hizb, plusieurs plages d'ayat par sourate",
+        "Récitateurs : Saad Al-Ghamidi, Saoud Ash-Shuraim, Ayman Suwaid"
+      ]
+    },
     {
       "version": "1.2.0",
       "date": "2026-11-22",
