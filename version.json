@@ -1,7 +1,14 @@
 {
-  "version": "1.6.2",
+  "version": "1.7.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.7.0",
+      "date": "2026-11-22",
+      "notes": [
+        "Émojis remplacés par des icônes au trait aux couleurs du thème"
+      ]
+    },
     {
       "version": "1.6.2",
       "date": "2026-11-22",

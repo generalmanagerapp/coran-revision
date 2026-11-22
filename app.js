@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.6.2';
+const VERSION = '1.7.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,19 +13,23 @@ const pad3 = n => String(n).padStart(3, '0');
 const today = () => new Date().toLocaleDateString('sv');
 
 /* ---------- Modes ---------- */
+const ICONS = {"cards": "<path d=\"M3.604 7.197l7.138 -3.109a.96 .96 0 0 1 1.27 .527l4.924 11.902a1 1 0 0 1 -.514 1.304l-7.137 3.109a.96 .96 0 0 1 -1.271 -.527l-4.924 -11.903a1 1 0 0 1 .514 -1.304l0 .001\" /> <path d=\"M15 4h1a1 1 0 0 1 1 1v3.5\" /> <path d=\"M20 6c.264 .112 .52 .217 .768 .315a1 1 0 0 1 .53 1.311l-2.298 5.374\" />", "book-2": "<path d=\"M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12\" /> <path d=\"M19 16h-12a2 2 0 0 0 -2 2\" /> <path d=\"M9 8h6\" />", "list-check": "<path d=\"M3.5 5.5l1.5 1.5l2.5 -2.5\" /> <path d=\"M3.5 11.5l1.5 1.5l2.5 -2.5\" /> <path d=\"M3.5 17.5l1.5 1.5l2.5 -2.5\" /> <path d=\"M11 6l9 0\" /> <path d=\"M11 12l9 0\" /> <path d=\"M11 18l9 0\" />", "chart-bar": "<path d=\"M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6\" /> <path d=\"M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10\" /> <path d=\"M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14\" /> <path d=\"M4 20h14\" />", "settings": "<path d=\"M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065\" /> <path d=\"M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" />", "adjustments-horizontal": "<path d=\"M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /> <path d=\"M4 6l8 0\" /> <path d=\"M16 6l4 0\" /> <path d=\"M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /> <path d=\"M4 12l2 0\" /> <path d=\"M10 12l10 0\" /> <path d=\"M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /> <path d=\"M4 18l11 0\" /> <path d=\"M19 18l1 0\" />", "arrows-shuffle": "<path d=\"M18 4l3 3l-3 3\" /> <path d=\"M18 20l3 -3l-3 -3\" /> <path d=\"M3 7h3a5 5 0 0 1 5 5a5 5 0 0 0 5 5h5\" /> <path d=\"M21 7h-5a4.978 4.978 0 0 0 -3 1m-4 8a4.984 4.984 0 0 1 -3 1h-3\" />", "stopwatch": "<path d=\"M5 13a7 7 0 1 0 14 0a7 7 0 0 0 -14 0\" /> <path d=\"M14.5 10.5l-2.5 2.5\" /> <path d=\"M17 8l1 -1\" /> <path d=\"M14 3h-4\" />", "player-track-next": "<path d=\"M3 5v14l8 -7l-8 -7\" /> <path d=\"M14 5v14l8 -7l-8 -7\" />", "player-track-prev": "<path d=\"M21 5v14l-8 -7l8 -7\" /> <path d=\"M10 5v14l-8 -7l8 -7\" />", "puzzle": "<path d=\"M4 7h3a1 1 0 0 0 1 -1v-1a2 2 0 0 1 4 0v1a1 1 0 0 0 1 1h3a1 1 0 0 1 1 1v3a1 1 0 0 0 1 1h1a2 2 0 0 1 0 4h-1a1 1 0 0 0 -1 1v3a1 1 0 0 1 -1 1h-3a1 1 0 0 1 -1 -1v-1a2 2 0 0 0 -4 0v1a1 1 0 0 1 -1 1h-3a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h1a2 2 0 0 0 0 -4h-1a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1\" />", "forms": "<path d=\"M12 3a3 3 0 0 0 -3 3v12a3 3 0 0 0 3 3\" /> <path d=\"M6 3a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3\" /> <path d=\"M13 7h7a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-7\" /> <path d=\"M5 7h-1a1 1 0 0 0 -1 1v8a1 1 0 0 0 1 1h1\" /> <path d=\"M17 12h.01\" /> <path d=\"M13 12h.01\" />", "map-pin": "<path d=\"M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" /> <path d=\"M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0\" />", "arrows-sort": "<path d=\"M3 9l4 -4l4 4m-4 -4v14\" /> <path d=\"M21 15l-4 4l-4 -4m4 4v-14\" />", "headphones": "<path d=\"M4 15a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2l0 -3\" /> <path d=\"M15 15a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2l0 -3\" /> <path d=\"M4 15v-3a8 8 0 0 1 16 0v3\" />", "microphone": "<path d=\"M9 5a3 3 0 0 1 3 -3a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3a3 3 0 0 1 -3 -3l0 -5\" /> <path d=\"M5 10a7 7 0 0 0 14 0\" /> <path d=\"M8 21l8 0\" /> <path d=\"M12 17l0 4\" />", "abc": "<path d=\"M3 16v-6a2 2 0 1 1 4 0v6\" /> <path d=\"M3 13h4\" /> <path d=\"M10 8v6a2 2 0 1 0 4 0v-1a2 2 0 1 0 -4 0v1\" /> <path d=\"M20.732 12a2 2 0 0 0 -3.732 1v1a2 2 0 0 0 3.726 1.01\" />", "ear": "<path d=\"M6 10a7 7 0 1 1 13 3.6a10 10 0 0 1 -2 2a8 8 0 0 0 -2 3a4.5 4.5 0 0 1 -6.8 1.4\" /> <path d=\"M10 10a3 3 0 1 1 5 2.2\" />", "brain": "<path d=\"M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8\" /> <path d=\"M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8\" /> <path d=\"M17.5 16a3.5 3.5 0 0 0 0 -7h-.5\" /> <path d=\"M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0\" /> <path d=\"M6.5 16a3.5 3.5 0 0 1 0 -7h.5\" /> <path d=\"M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10\" />", "volume": "<path d=\"M15 8a5 5 0 0 1 0 8\" /> <path d=\"M17.7 5a9 9 0 0 1 0 14\" /> <path d=\"M6 15h-2a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h2l3.5 -4.5a.8 .8 0 0 1 1.5 .5v14a.8 .8 0 0 1 -1.5 .5l-3.5 -4.5\" />", "eye": "<path d=\"M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0\" /> <path d=\"M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6\" />", "eye-off": "<path d=\"M10.585 10.587a2 2 0 0 0 2.829 2.828\" /> <path d=\"M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87\" /> <path d=\"M3 3l18 18\" />", "player-play": "<path d=\"M7 4v16l13 -8l-13 -8\" />", "player-pause": "<path d=\"M6 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12\" /> <path d=\"M14 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12\" />", "player-stop": "<path d=\"M5 7a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -10\" />", "repeat": "<path d=\"M4 12v-3a3 3 0 0 1 3 -3h13m-3 -3l3 3l-3 3\" /> <path d=\"M20 12v3a3 3 0 0 1 -3 3h-13m3 3l-3 -3l3 -3\" />", "download": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /> <path d=\"M7 11l5 5l5 -5\" /> <path d=\"M12 4l0 12\" />", "upload": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /> <path d=\"M7 9l5 -5l5 5\" /> <path d=\"M12 4l0 12\" />", "check": "<path d=\"M5 12l5 5l10 -10\" />", "x": "<path d=\"M18 6l-12 12\" /> <path d=\"M6 6l12 12\" />", "circle-check": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /> <path d=\"M9 12l2 2l4 -4\" />", "circle-x": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /> <path d=\"M10 10l4 4m0 -4l-4 4\" />", "alert-circle": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0\" /> <path d=\"M12 8v4\" /> <path d=\"M12 16h.01\" />", "flame": "<path d=\"M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.294 -2.333 5.588c0 3.704 3.134 6.706 7 6.706c3.866 0 7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235\" />", "trophy": "<path d=\"M8 21l8 0\" /> <path d=\"M12 17l0 4\" /> <path d=\"M7 4l10 0\" /> <path d=\"M17 4v8a5 5 0 0 1 -10 0v-8\" /> <path d=\"M3 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /> <path d=\"M17 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" />", "star": "<path d=\"M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245\" />", "palette": "<path d=\"M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25\" /> <path d=\"M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />", "target-arrow": "<path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M12 7a5 5 0 1 0 5 5\" /> <path d=\"M13 3.055a9 9 0 1 0 7.941 7.945\" /> <path d=\"M15 6v3h3l3 -3h-3v-3l-3 3\" /> <path d=\"M15 9l-3 3\" />", "device-gamepad-2": "<path d=\"M12 5h3.5a5 5 0 0 1 0 10h-5.5l-4.015 4.227a2.3 2.3 0 0 1 -3.923 -2.035l1.634 -8.173a5 5 0 0 1 4.904 -4.019h3.4\" /> <path d=\"M14 15l4.07 4.284a2.3 2.3 0 0 0 3.925 -2.023l-1.6 -8.232\" /> <path d=\"M8 9v2\" /> <path d=\"M7 10h2\" /> <path d=\"M14 10h2\" />", "device-floppy": "<path d=\"M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2\" /> <path d=\"M10 14a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /> <path d=\"M14 4l0 4l-6 0l0 -4\" />", "trash": "<path d=\"M4 7l16 0\" /> <path d=\"M10 11l0 6\" /> <path d=\"M14 11l0 6\" /> <path d=\"M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12\" /> <path d=\"M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3\" />", "grip-vertical": "<path d=\"M8 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M8 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M8 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M14 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M14 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M14 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />", "chevron-right": "<path d=\"M9 6l6 6l-6 6\" />", "list-details": "<path d=\"M13 5h8\" /> <path d=\"M13 9h5\" /> <path d=\"M13 15h8\" /> <path d=\"M13 19h5\" /> <path d=\"M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" />", "refresh": "<path d=\"M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4\" /> <path d=\"M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4\" />", "confetti": "<path d=\"M4 5h2\" /> <path d=\"M5 4v2\" /> <path d=\"M11.5 4l-.5 2\" /> <path d=\"M18 5h2\" /> <path d=\"M19 4v2\" /> <path d=\"M15 9l-1 1\" /> <path d=\"M18 13l2 -.5\" /> <path d=\"M18 19h2\" /> <path d=\"M19 18v2\" /> <path d=\"M14 16.518l-6.518 -6.518l-4.39 9.58a1 1 0 0 0 1.329 1.329l9.579 -4.39\" />", "star-filled": "<path d=\"M8.243 7.34l-6.38 .925l-.113 .023a1 1 0 0 0 -.44 1.684l4.622 4.499l-1.09 6.355l-.013 .11a1 1 0 0 0 1.464 .944l5.706 -3l5.693 3l.1 .046a1 1 0 0 0 1.352 -1.1l-1.091 -6.355l4.624 -4.5l.078 -.085a1 1 0 0 0 -.633 -1.62l-6.38 -.926l-2.852 -5.78a1 1 0 0 0 -1.794 0l-2.853 5.78z\" />", "blocks": "<path d=\"M14 4a1 1 0 0 1 1 -1h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1l0 -5\" /> <path d=\"M3 14h12a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h3a2 2 0 0 1 2 2v12\" />"};
+const ic = (n, cls = '') => n.endsWith('-filled')
+  ? `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">${ICONS[n] || ''}</svg>`
+  : `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 const MODES = {
-  suivante:   { label: 'Aya suivante',   icon: '⏭️', g: 'quiz', d: 'Trouve l’aya qui vient juste après' },
-  precedente: { label: 'Aya précédente', icon: '⏮️', g: 'quiz', d: 'Trouve l’aya qui vient juste avant' },
-  complete:   { label: 'Compléter',      icon: '🧩', g: 'quiz', d: 'Choisis la fin de l’aya' },
-  mot:        { label: 'Mot manquant',   icon: '🔤', g: 'quiz', d: 'Retrouve le mot qui manque' },
-  sourate:    { label: 'Quelle sourate', icon: '📍', g: 'quiz', d: 'De quelle sourate vient l’aya ?' },
-  ordre:      { label: 'Remettre en ordre', icon: '🔢', g: 'quiz', d: 'Fais glisser 4 ayat dans l’ordre' },
-  motamot:    { label: 'Mot à mot',      icon: '🧱', g: 'quiz', d: 'Reconstitue l’aya en touchant les mots dans l’ordre' },
-  ecoute:     { label: 'Écoute',         icon: '🎧', g: 'quiz', d: 'Écoute et reconnais l’aya' },
-  recite:     { label: 'Réciter',        icon: '🎙️', g: 'recit', d: 'Récite la suite ou la fin de l’aya' },
-  lettres:    { label: 'Premières lettres', icon: '🔠', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
-  echo:       { label: 'Écho',           icon: '👂', g: 'memo', d: 'Écoute l’aya, puis répète-la sans le texte' },
-  efface:     { label: 'Effacement',     icon: '🧠', g: 'memo', d: 'Le texte s’efface petit à petit : tiens jusqu’au bout !' },
+  suivante:   { label: 'Aya suivante',   icon: 'player-track-next', g: 'quiz', d: 'Trouve l’aya qui vient juste après' },
+  precedente: { label: 'Aya précédente', icon: 'player-track-prev', g: 'quiz', d: 'Trouve l’aya qui vient juste avant' },
+  complete:   { label: 'Compléter',      icon: 'puzzle', g: 'quiz', d: 'Choisis la fin de l’aya' },
+  mot:        { label: 'Mot manquant',   icon: 'forms', g: 'quiz', d: 'Retrouve le mot qui manque' },
+  sourate:    { label: 'Quelle sourate', icon: 'map-pin', g: 'quiz', d: 'De quelle sourate vient l’aya ?' },
+  ordre:      { label: 'Remettre en ordre', icon: 'arrows-sort', g: 'quiz', d: 'Fais glisser 4 ayat dans l’ordre' },
+  motamot:    { label: 'Mot à mot',      icon: 'blocks', g: 'quiz', d: 'Reconstitue l’aya en touchant les mots dans l’ordre' },
+  ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais l’aya' },
+  recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin de l’aya' },
+  lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
+  echo:       { label: 'Écho',           icon: 'ear', g: 'memo', d: 'Écoute l’aya, puis répète-la sans le texte' },
+  efface:     { label: 'Effacement',     icon: 'brain', g: 'memo', d: 'Le texte s’efface petit à petit : tiens jusqu’au bout !' },
 };
 const GROUPS = { quiz: 'Quiz', recit: 'Récitation', memo: 'Mémorisation (jeux)' };
 const QUICK = ['suivante', 'precedente', 'complete', 'mot', 'sourate'];   // modes du défi chrono
@@ -246,7 +250,7 @@ function playSeq(list) { let i = 0; const go = () => { if (i < list.length) play
 function arSize(text) { const l = text.length; return l > 380 ? 'xs' : l > 160 ? 'small' : ''; }
 function arBlock(text, extra = '') { return `<div class="ar ${arSize(text)} ${extra}">${text}</div>`; }
 function frBlock(a) { return S.settings.trad ? `<div class="fr">${esc(a.fr)}</div>` : ''; }
-function refLine(a) { return `<div class="ref">${esc(surahName(a.s))} · ${a.s}:${a.a} <button class="play" data-play="${a.s}:${a.a}">🔊</button></div>`; }
+function refLine(a) { return `<div class="ref">${esc(surahName(a.s))} · ${a.s}:${a.a} <button class="play" data-play="${a.s}:${a.a}" aria-label="Écouter">${ic('volume')}</button></div>`; }
 // préfixes minimaux pour distinguer des propositions (ayat qui se ressemblent)
 function distinctPrefixes(list, min = 5, max = 40) {
   for (let L = min; L <= max; L++) {
@@ -365,7 +369,7 @@ function buildQuestion(mode) {
     case 'echo': {
       const x = pickTarget(() => true); if (!x) return null;
       return { mode, recit: true, target: x, forcePlay: true, prompt: 'Écoute bien, puis répète l’aya sans la voir',
-        showHtml: `<div style="text-align:center;margin:10px 0"><button class="btn gold" data-listen>👂 Réécouter</button></div>${frBlock(x)}<div class="ref">${esc(surahName(x.s))} · ${x.s}:${x.a}</div>`, expected: x.tk };
+        showHtml: `<div style="text-align:center;margin:10px 0"><button class="btn gold" data-listen>${ic('ear')} Réécouter</button></div>${frBlock(x)}<div class="ref">${esc(surahName(x.s))} · ${x.s}:${x.a}</div>`, expected: x.tk };
     }
     case 'efface': {
       const x = pickTarget(a => a.tk.length >= 3); if (!x) return null;
@@ -376,7 +380,7 @@ function buildQuestion(mode) {
       const opts = shuffle([x, ...distractorsFor(x)]);
       const labels = distinctPrefixes(opts.map(o => o.tk));
       return { mode, target: x, prompt: 'Écoute et choisis l’aya récitée', audio: true,
-        showHtml: `<div style="text-align:center;margin:14px 0"><button class="btn gold" data-listen>🎧 Écouter</button></div>`,
+        showHtml: `<div style="text-align:center;margin:14px 0"><button class="btn gold" data-listen>${ic('headphones')} Écouter</button></div>`,
         opts: opts.map((o, i) => ({ html: labels[i], good: o.id === x.id, aya: o })) };
     }
   }
@@ -406,23 +410,23 @@ let currentCard = null;
 function updateSession() {
   $('#sessionInfo').textContent = session.n ? `${session.n} carte${session.n > 1 ? 's' : ''} · ${Math.round(100 * session.ok / session.n)} %` : '';
   const g = S.settings.goal || 20, d = S.days[today()] || 0, el = $('#goal');
-  if (el) { el.querySelector('span').textContent = d >= g ? `🎉 Objectif du jour atteint : ${d}/${g}` : `Objectif du jour : ${d}/${g}`; el.querySelector('b').style.width = Math.min(100, 100 * d / g) + '%'; el.classList.toggle('done', d >= g); }
-  if (d >= g && !(S.goalDone || {})[today()]) { S.goalDone = S.goalDone || {}; S.goalDone[today()] = 1; save(); toast('🎉 Objectif du jour atteint, barakAllahu fik !'); }
+  if (el) { el.querySelector('span').textContent = d >= g ? `Objectif du jour atteint : ${d}/${g}` : `Objectif du jour : ${d}/${g}`; el.querySelector('b').style.width = Math.min(100, 100 * d / g) + '%'; el.classList.toggle('done', d >= g); }
+  if (d >= g && !(S.goalDone || {})[today()]) { S.goalDone = S.goalDone || {}; S.goalDone[today()] = 1; save(); toast('Objectif du jour atteint, barakAllahu fik !'); }
 }
 function enabledModes() { return Object.keys(MODES).filter(m => S.modes[m]); }
 
 function renderModeBar() {
-  const list = [['mix', `🔀 Mix (${enabledModes().length})`], ['defi', '⏱️ Défi 60 s'], ...enabledModes().map(m => [m, MODES[m].icon + ' ' + MODES[m].label])];
+  const list = [['mix', `${ic('arrows-shuffle')} Mix (${enabledModes().length})`], ['defi', `${ic('stopwatch')} Défi 60 s`], ...enabledModes().map(m => [m, ic(MODES[m].icon) + ' ' + MODES[m].label])];
   if (S.current !== 'mix' && S.current !== 'defi' && !S.modes[S.current]) S.current = 'mix';
-  $('#modeBar').innerHTML = `<button class="chip pick" data-pick>🎯 Exercices</button>` + list.map(([k, l]) => `<button class="chip ${S.current === k ? 'on' : ''}" data-mode="${k}">${l}</button>`).join('');
+  $('#modeBar').innerHTML = `<button class="chip pick" data-pick>${ic('adjustments-horizontal')} Exercices</button>` + list.map(([k, l]) => `<button class="chip ${S.current === k ? 'on' : ''}" data-mode="${k}">${l}</button>`).join('');
   updateSession();
 }
 /* Choix des exercices */
 function openPicker() {
   const sh = document.createElement('div'); sh.className = 'sheet-bg';
-  sh.innerHTML = `<div class="sheet"><h2>Sur quoi tu veux travailler ?</h2><p class="muted">Coche un ou plusieurs exercices : le mode 🔀 Mix les mélange.</p>
+  sh.innerHTML = `<div class="sheet"><h2>Sur quoi tu veux travailler ?</h2><p class="muted">Coche un ou plusieurs exercices : le mode Mix les mélange.</p>
     ${Object.entries(GROUPS).map(([g, gl]) => `<h3>${gl}</h3>${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `
-      <label class="pk"><input type="checkbox" data-pk="${k}" ${S.modes[k] ? 'checked' : ''}><span class="pi">${m.icon}</span><span><b>${m.label}</b><small>${m.d}</small></span></label>`).join('')}`).join('')}
+      <label class="pk"><input type="checkbox" data-pk="${k}" ${S.modes[k] ? 'checked' : ''}><span class="pi">${ic(m.icon)}</span><span><b>${m.label}</b><small>${m.d}</small></span></label>`).join('')}`).join('')}
     <div class="btnrow"><button class="btn light" data-pkall>Tout cocher</button><button class="btn gold" data-pkok>C’est parti</button></div></div>`;
   document.body.appendChild(sh);
   sh.addEventListener('click', e => {
@@ -445,15 +449,15 @@ function startChallenge() {
 function tickChallenge() {
   if (!chall) return;
   const left = Math.max(0, Math.ceil((chall.end - Date.now()) / 1000));
-  $('#deckHint').innerHTML = `<span class="chrono">⏱️ ${left} s · ✅ ${chall.ok}</span>`;
+  $('#deckHint').innerHTML = `<span class="chrono">${ic('stopwatch')} ${left} s · ${ic('circle-check')} ${chall.ok}</span>`;
   if (left <= 0) endChallenge();
 }
 function endChallenge() {
   clearInterval(chall.timer); const r = chall; chall = null;
   const rec = r.ok > (S.best || 0); if (rec) { S.best = r.ok; save(); }
-  $('#deck').innerHTML = `<div class="card"><div class="body endc"><div class="big">⏱️</div><h2>Défi terminé !</h2>
+  $('#deck').innerHTML = `<div class="card"><div class="body endc"><div class="big">${ic('stopwatch')}</div><h2>Défi terminé !</h2>
     <div class="score">${r.ok}<small> bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''} sur ${r.n}</small></div>
-    <p>${rec ? '🏆 Nouveau record !' : `Record : ${S.best}`}</p>
+    <p>${rec ? `${ic('trophy')} Nouveau record !` : `Record : ${S.best}`}</p>
     <div class="btnrow"><button class="btn gold" data-mode="defi">Rejouer</button><button class="btn light" data-mode="mix">Retour au Mix</button></div></div></div>`;
   $('#deckHint').textContent = '';
 }
@@ -462,7 +466,7 @@ function newCard() {
   const deck = $('#deck');
   deck.innerHTML = '';
   if (!S.selected.length) {
-    deck.innerHTML = `<div class="empty">Coche d’abord les sourates que tu connais.<br><button class="btn gold" data-goto="surahs">📖 Choisir mes sourates</button></div>`;
+    deck.innerHTML = `<div class="empty">Coche d’abord les sourates que tu connais.<br><button class="btn gold" data-goto="surahs">${ic('list-check')} Choisir mes sourates</button></div>`;
     $('#deckHint').textContent = ''; return;
   }
   let q = null, tries = 0;
@@ -487,19 +491,19 @@ function renderCard(c) {
   if (q.show) body += arBlock(q.show.ar) + frBlock(q.show) + refLine(q.show);
   if (q.showHtml) body += q.showHtml;
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
-  if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ot">${it.html}</span></div>`).join('')}</div>
-    <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>✔ Valider l’ordre</button></div>`;
+  if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip">${ic('grip-vertical')}</span><span class="ot">${it.html}</span></div>`).join('')}</div>
+    <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>${ic('check')} Valider l’ordre</button></div>`;
   if (q.tiles) body += `${frBlock(q.target)}<div class="ref">${esc(surahName(q.target.s))} · ${q.target.s}:${q.target.a}</div>
     <div class="ar mmline">${q.before ? q.before + ' ' : ''}<span data-mmans></span><span class="mmcur">▁▁</span>${q.after ? ' …' : ''}</div>
-    <div class="tiles">${q.tiles.map((t, i) => `<button class="tile" data-tile="${i}">${t.w}</button>`).join('')}</div>`;
+    <div class="tiles">${q.tiles.map((t, i) => `<button class="wtile" data-tile="${i}">${t.w}</button>`).join('')}</div>`;
   if (q.efface) body += `<div class="lvl" data-lvl></div><div data-eff></div>${frBlock(q.target)}${refLine(q.target)}
-    <div class="btnrow" data-effbtn><button class="btn ko" data-effko>✘ J’ai bloqué</button><button class="btn ok" data-effok>✔ Je l’ai dit</button></div>`;
+    <div class="btnrow" data-effbtn><button class="btn ko" data-effko>${ic('x')} J’ai bloqué</button><button class="btn ok" data-effok>${ic('check')} Je l’ai dit</button></div>`;
   if (q.recit) {
-    body += `<div class="btnrow">${SR && S.settings.voice ? `<button class="btn gold" data-mic>🎙️ Réciter</button>` : ''}<button class="btn light" data-reveal>👁️ Révéler</button></div><div class="transcript" data-tr></div>`;
+    body += `<div class="btnrow">${SR && S.settings.voice ? `<button class="btn gold" data-mic>${ic('microphone')} Réciter</button>` : ''}<button class="btn light" data-reveal>${ic('eye')} Révéler</button></div><div class="transcript" data-tr></div>`;
   }
   body += `<div data-after></div>`;
-  el.innerHTML = `<div class="stamp r">SU ✓</div><div class="stamp l">À REVOIR</div>
-    <div class="head"><span class="tag">${m.icon} ${m.label}</span><span>${esc(surahName(q.target.s))}${q.hideRef ? '' : ''}</span></div>
+  el.innerHTML = `<div class="stamp r">SU</div><div class="stamp l">À REVOIR</div>
+    <div class="head"><span class="tag">${ic(m.icon)} ${m.label}</span><span>${esc(surahName(q.target.s))}${q.hideRef ? '' : ''}</span></div>
     <div class="body">${body}</div>`;
   if (q.mode === 'sourate') $('.head span:last-child', el).textContent = 'Sourate ?';
   setHint(c);
@@ -518,7 +522,7 @@ function renderEff(c) {
   }).join(' ');
   $('[data-eff]', c.el).innerHTML = `<div class="ar ${arSize(q.target.ar)}">${html}</div>`;
   const names = ['Lis', '⅓ caché', '⅔ caché', 'Initiales', 'De mémoire'];
-  $('[data-lvl]', c.el).innerHTML = names.map((nm, i) => `<span class="${i < L ? 'done' : i === L ? 'cur' : ''}">${i < L ? '★' : '☆'}<small>${nm}</small></span>`).join('');
+  $('[data-lvl]', c.el).innerHTML = names.map((nm, i) => `<span class="${i < L ? 'done' : i === L ? 'cur' : ''}">${ic(i < L ? 'star-filled' : 'star')}<small>${nm}</small></span>`).join('');
 }
 
 function setHint(c) {
@@ -532,7 +536,7 @@ function setHint(c) {
 function finish(c, g, html) {
   c.answered = true; c.g = g;
   const t = c.q.target;
-  const msg = { ok: '✅ Bravo !', mid: '🟠 Presque', ko: '❌ Raté' }[g];
+  const msg = { ok: `${ic('circle-check')} Bravo !`, mid: `${ic('alert-circle')} Presque`, ko: `${ic('circle-x')} Raté` }[g];
   let out = html || `<div class="result ${g}">${msg}</div>`;
   if (!html) out += revealBlock(t, c.q) + `<div class="btnrow"><button class="btn gold" data-nextcard>Suivant →</button></div>`;
   $('[data-after]', c.el).innerHTML = out;
@@ -543,7 +547,7 @@ function finish(c, g, html) {
 }
 function revealBlock(t, q) {
   let s = `<div class="reveal">`;
-  if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}">🔊</button></div>`;
+  if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}" aria-label="Écouter">${ic('volume')}</button></div>`;
   else s += arBlock(t.ar, 'small') + frBlock(t) + refLine(t);
   return s + `</div>`;
 }
@@ -643,11 +647,11 @@ function toggleMic(c, btn) {
   // Chrome Android renvoie des résultats cumulés en mode continu → doublons
   recog.continuous = !/Android/i.test(navigator.userAgent);
   const trEl = $('[data-tr]', c.el); let text = '';
-  btn.classList.add('rec'); btn.textContent = '⏹️ Stop';
+  btn.classList.add('rec'); btn.innerHTML = `${ic('player-stop')} Stop`;
   player.pause();
   recog.onresult = ev => { text = cleanTranscript([...ev.results].map(r => r[0].transcript)); trEl.textContent = text; };
   recog.onerror = ev => { trEl.textContent = ev.error === 'not-allowed' ? 'Micro refusé — utilise « Révéler ».' : 'Erreur micro : ' + ev.error; };
-  recog.onend = () => { recog = null; btn.classList.remove('rec'); btn.textContent = '🎙️ Réessayer'; if (text.trim()) scoreRecite(c, text); };
+  recog.onend = () => { recog = null; btn.classList.remove('rec'); btn.innerHTML = `${ic('microphone')} Réessayer`; if (text.trim()) scoreRecite(c, text); };
   try { recog.start(); } catch (e) { recog = null; }
 }
 function cleanTranscript(segs) {
@@ -675,7 +679,7 @@ function scoreRecite(c, text) {
   const pre = c.q.sub === 'fin' ? c.q.target.tk.slice(0, c.q.startLen).join(' ') + ' ' : '';
   const t = c.q.target;
   c.answered = true; c.selfEval = true; c.suggested = g;
-  $('[data-after]', c.el).innerHTML = `<div class="result ${g}">${{ ok: '✅', mid: '🟠', ko: '❌' }[g]} ${Math.round(ratio * 100)} % de correspondance</div>
+  $('[data-after]', c.el).innerHTML = `<div class="result ${g}">${ic({ ok: 'circle-check', mid: 'alert-circle', ko: 'circle-x' }[g])} ${Math.round(ratio * 100)} % de correspondance</div>
     <div class="reveal"><div class="ar ${arSize(t.ar)}">${pre}${shown}</div>${frBlock(t)}${refLine(t)}</div>${selfButtons()}`;
   setHint(c);
 }
@@ -687,7 +691,7 @@ function revealRecite(c) {
   setHint(c);
   if (S.settings.autoplay) play(c.q.target);
 }
-const selfButtons = () => `<div class="btnrow"><button class="btn ko" data-self="ko">✘ Raté</button><button class="btn mid" data-self="mid">~ Hésité</button><button class="btn ok" data-self="ok">✔ Su</button></div>`;
+const selfButtons = () => `<div class="btnrow"><button class="btn ko" data-self="ko">${ic('x')} Raté</button><button class="btn mid" data-self="mid">${ic('alert-circle')} Hésité</button><button class="btn ok" data-self="ok">${ic('check')} Su</button></div>`;
 function finishSelf(c, g) { if (c.graded) return; c.graded = true; grade(c.q.target, g); }
 
 /* Swipe */
@@ -818,7 +822,7 @@ function renderStats() {
   const due = recs.filter(r => r && r.d <= Date.now()).length;
   const pct = S.total.n ? Math.round(100 * S.total.ok / S.total.n) : 0;
   let html = `<div class="grid">
-    <div class="tile"><b>🔥 ${streak()}</b><span>jours d’affilée</span></div>
+    <div class="tile"><b>${ic('flame', 'flame')} ${streak()}</b><span>jours d’affilée</span></div>
     <div class="tile"><b>${S.days[today()] || 0}</b><span>cartes aujourd’hui</span></div>
     <div class="tile"><b>${pct} %</b><span>réussite globale (${S.total.n})</span></div>
     <div class="tile"><b>${due}</b><span>ayat à revoir maintenant</span></div>
@@ -852,30 +856,30 @@ function renderStats() {
 const openSec = new Set();
 function renderSettings() {
   const st = S.settings;
-  const sec = (id, icon, title, sub, body) => `<details class="sec" data-sec="${id}" ${openSec.has(id) ? 'open' : ''}><summary><span class="si">${icon}</span><span class="st">${title}<small>${sub}</small></span><span class="chev">›</span></summary><div class="sec-b">${body}</div></details>`;
+  const sec = (id, icon, title, sub, body) => `<details class="sec" data-sec="${id}" ${openSec.has(id) ? 'open' : ''}><summary><span class="si">${ic(icon)}</span><span class="st">${title}<small>${sub}</small></span><span class="chev">${ic('chevron-right')}</span></summary><div class="sec-b">${body}</div></details>`;
   const chk = (key, label, sub, extra = '') => `<label><span>${label}${sub ? `<small>${sub}</small>` : ''}</span><input type="checkbox" data-set="${key}" ${st[key] ? 'checked' : ''} ${extra}></label>`;
   const nMod = enabledModes().length, total = Object.keys(MODES).length;
   $('#settingsBox').innerHTML = `<div class="secs">
-  ${sec('look', '🎨', 'Apparence', (THEMES[st.theme] || THEMES.emeraude).name,
+  ${sec('look', 'palette', 'Apparence', (THEMES[st.theme] || THEMES.emeraude).name,
     `<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
      <div class="set">${chk('trad', 'Traduction française', 'Hamidullah')}</div>`)}
-  ${sec('goal', '🎯', 'Objectif & accueil', `${st.goal} cartes par jour`,
+  ${sec('goal', 'target-arrow', 'Objectif & accueil', `${st.goal} cartes par jour`,
     `<div class="set"><label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
      ${chk('opening', 'Écran d’ouverture', 'Petite duaa + hadith du jour')}</div>`)}
-  ${sec('ex', '🃏', 'Exercices', `${nMod} sur ${total} actifs`,
-    Object.entries(GROUPS).map(([g, gl]) => `<h4>${gl}</h4><div class="set">${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `<label><span>${m.icon} ${m.label}<small>${m.d}</small></span><input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>`).join(''))}
-  ${sec('game', '🎮', 'Options de jeu', st.pieges ? 'Pièges activés' : 'Pièges désactivés',
+  ${sec('ex', 'cards', 'Exercices', `${nMod} sur ${total} actifs`,
+    Object.entries(GROUPS).map(([g, gl]) => `<h4>${gl}</h4><div class="set">${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `<label><span class="mlab">${ic(m.icon)} ${m.label}<small>${m.d}</small></span><input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>`).join(''))}
+  ${sec('game', 'device-gamepad-2', 'Options de jeu', st.pieges ? 'Pièges activés' : 'Pièges désactivés',
     `<div class="set">${chk('pieges', 'Pièges (ayat qui se ressemblent)', 'Les mauvaises réponses sont des mutashabihat')}
      ${chk('voice', 'Reconnaissance vocale', SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation', SR ? '' : 'disabled')}
      <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Aya suivante'], ['fin', 'Fin de l’aya']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
-  ${sec('audio', '🔊', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
+  ${sec('audio', 'volume', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
     `<div class="set"><label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
      ${chk('autoplay', 'Lecture audio automatique', 'Mode écoute + correction')}</div>`)}
-  ${sec('save', '💾', 'Sauvegarde', 'Exporter / importer ta progression',
+  ${sec('save', 'device-floppy', 'Sauvegarde', 'Exporter / importer ta progression',
     `<div class="set" style="padding:12px"><p class="muted" style="margin:0 0 10px">Garde une copie de ta progression ou transfère-la sur un autre téléphone.</p>
-     <div class="btnrow" style="margin:0"><button class="btn gold" data-export>⬇️ Exporter</button><button class="btn light" data-import>⬆️ Importer</button></div>
+     <div class="btnrow" style="margin:0"><button class="btn gold" data-export>${ic('download')} Exporter</button><button class="btn light" data-import>${ic('upload')} Importer</button></div>
      <input type="file" accept=".json,application/json" data-importfile hidden></div>`)}
-  ${sec('data', '🗑️', 'Données', 'Réinitialiser le suivi',
+  ${sec('data', 'trash', 'Données', 'Réinitialiser le suivi',
     `<button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>`)}
   </div>
   <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br>Version ${VERSION}</div>`;
@@ -922,7 +926,7 @@ function renderRead() {
 }
 function markRead() {
   $$('#readBox .ra').forEach(el => el.classList.toggle('cur', readOn && +el.dataset.ra === readCur));
-  $('#rPlay').textContent = readOn ? '⏸ Pause' : '▶︎ Écouter';
+  $('#rPlay').innerHTML = readOn ? `${ic('player-pause')} Pause` : `${ic('player-play')} Écouter`;
   $('#rRep').setAttribute('aria-pressed', readRep); $('#rRep').classList.toggle('gold', readRep);
   $('#rMask').setAttribute('aria-pressed', readMask); $('#rMask').classList.toggle('gold', readMask);
 }
@@ -959,7 +963,7 @@ function importData(f) {
       const j = JSON.parse(r.result); if (j.app !== 'muraja-a' || !j.data) throw 0;
       if (!confirm('Remplacer ta progression actuelle par cette sauvegarde ?')) return;
       const def = defaultState(); S = { ...def, ...j.data, modes: { ...def.modes, ...j.data.modes }, settings: { ...def.settings, ...j.data.settings } };
-      save(); applyTheme(); buildPool(); renderSettings(); renderModeBar(); toast('✅ Sauvegarde importée');
+      save(); applyTheme(); buildPool(); renderSettings(); renderModeBar(); toast('Sauvegarde importée');
     } catch (e) { toast('Fichier de sauvegarde invalide'); }
   };
   r.readAsText(f);

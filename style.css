@@ -263,8 +263,8 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .mmcur{color:var(--gold);animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
 .tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;direction:rtl}
-.tile{font-family:var(--ar);font-size:22px;line-height:1.7;padding:4px 14px;border-radius:12px;border:2px solid var(--line);background:var(--opt);color:var(--ink);box-shadow:0 3px 0 var(--line)}
-.tile.used{visibility:hidden}
+.wtile{font-family:var(--ar);font-size:22px;line-height:1.7;padding:4px 14px;border-radius:12px;border:2px solid var(--line);background:var(--opt);color:var(--ink);box-shadow:0 3px 0 var(--line)}
+.wtile.used{visibility:hidden}
 .shake{animation:shake .35s;border-color:var(--red)!important}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 /* premières lettres */
@@ -313,3 +313,26 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .sec-b h4{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:10px 2px 6px}
 .sec-b h4:first-child{margin-top:2px}
 .sec-b .danger{margin-top:0}
+
+/* icônes au trait */
+.ic{width:1.15em;height:1.15em;vertical-align:-.22em;flex-shrink:0}
+.tabs .ic.nav{width:23px;height:23px;margin-bottom:1px}
+.btn .ic,.chip .ic{margin-right:2px}
+.play{color:var(--gold);font-size:20px}
+.play .ic{width:22px;height:22px}
+.sec .si{color:var(--gold);font-size:22px;display:flex;align-items:center;justify-content:center}
+.sec .si .ic{width:24px;height:24px}
+.sec .chev{display:flex}
+.sec .chev .ic{width:20px;height:20px}
+.pk .pi{color:var(--gold);display:flex}
+.pk .pi .ic{width:24px;height:24px}
+.card .tag .ic{width:15px;height:15px}
+.grip{color:var(--muted);display:flex}
+.grip .ic{width:20px;height:20px}
+.lvl span .ic{width:20px;height:20px}
+.lvl span.done .ic{color:var(--gold)}
+.endc .big .ic{width:54px;height:54px;color:var(--gold)}
+.result .ic{width:18px;height:18px}
+.tile b .ic,.tile .flame{color:#e8873a}
+.set .mlab .ic{color:var(--gold);width:18px;height:18px;margin-right:4px}
+[data-theme=medina] .brand-ar{color:#dbe9fb}
