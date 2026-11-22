@@ -1,7 +1,14 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.4.1",
+      "date": "2026-11-22",
+      "notes": [
+        "Nouveau nom : Muraja'a (مراجعة)"
+      ]
+    },
     {
       "version": "1.4.0",
       "date": "2026-11-22",

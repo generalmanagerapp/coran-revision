@@ -1,4 +1,4 @@
-# Révision Coran
+# Muraja'a (مراجعة) — Révision du Coran
 
 Appli web (PWA) pour réviser les sourates qu'on connaît, sous forme de cartes à glisser.
 

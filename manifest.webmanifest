@@ -1,6 +1,6 @@
 {
-  "name": "Révision Coran",
-  "short_name": "Coran",
+  "name": "Muraja'a — Révision du Coran",
+  "short_name": "Muraja'a",
   "description": "Réviser les sourates que je connais : QCM, récitation, écoute",
   "start_url": "./",
   "scope": "./",
