@@ -1,7 +1,7 @@
 /* Révision Coran — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.0.1';
+const VERSION = '1.1.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -85,7 +85,7 @@ async function loadData() {
       AYAS.push(a);
     });
   });
-  // index inversé pour retrouver les ayas proches (mutashabihat)
+  // index inversé pour retrouver les ayat proches (mutashabihat)
   for (const a of AYAS) for (const w of new Set(a.nw)) {
     if (!w) continue;
     DF.set(w, (DF.get(w) || 0) + 1);
@@ -122,7 +122,11 @@ function similar(target, n = 3, opts = {}) {
 
 /* ---------- Pool & SRS ---------- */
 let POOL = [];
-function buildPool() { const sel = new Set(S.selected); POOL = AYAS.filter(a => sel.has(a.s)); }
+const range = s => { const r = (S.ranges || {})[s], n = SURAHS[s - 1].count; return r ? [Math.max(1, Math.min(r[0], n)), Math.max(1, Math.min(r[1], n))] : [1, n]; };
+const inSel = a => { if (!S.selected.includes(a.s)) return false; const [f, t] = range(a.s); return a.a >= f && a.a <= t; };
+let POOL_IDS = new Set();
+function buildPool() { POOL = AYAS.filter(inSel); POOL_IDS = new Set(POOL.map(a => a.id)); }
+const inPool = a => !!a && POOL_IDS.has(a.id);
 const rec = a => S.srs[a.s + ':' + a.a];
 
 function pickTarget(filter) {
@@ -165,7 +169,7 @@ function arSize(text) { const l = text.length; return l > 380 ? 'xs' : l > 160 ?
 function arBlock(text, extra = '') { return `<div class="ar ${arSize(text)} ${extra}">${text}</div>`; }
 function frBlock(a) { return S.settings.trad ? `<div class="fr">${esc(a.fr)}</div>` : ''; }
 function refLine(a) { return `<div class="ref">${esc(surahName(a.s))} · ${a.s}:${a.a} <button class="play" data-play="${a.s}:${a.a}">🔊</button></div>`; }
-// préfixes minimaux pour distinguer des propositions (ayas qui se ressemblent)
+// préfixes minimaux pour distinguer des propositions (ayat qui se ressemblent)
 function distinctPrefixes(list, min = 5, max = 40) {
   for (let L = min; L <= max; L++) {
     const keys = list.map(t => t.slice(0, L).map(w => norm(w)).join(' '));
@@ -192,7 +196,7 @@ function buildQuestion(mode) {
   switch (mode) {
     case 'suivante': case 'precedente': {
       const isNext = mode === 'suivante';
-      const x = pickTarget(a => isNext ? !!next(a) : !!prev(a)); if (!x) return null;
+      const x = pickTarget(a => isNext ? inPool(next(a)) : inPool(prev(a))); if (!x) return null;
       const ans = isNext ? next(x) : prev(x);
       const opts = shuffle([ans, ...distractorsFor(ans, [x])]);
       const labels = distinctPrefixes(opts.map(o => o.tk));
@@ -244,16 +248,16 @@ function buildQuestion(mode) {
       return { mode, target: x, prompt: 'De quelle sourate vient cette aya ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
     }
     case 'ordre': {
-      const x = pickTarget(a => !!aya(a.s, a.a + 3)); if (!x) return null;
+      const x = pickTarget(a => inPool(aya(a.s, a.a + 3))); if (!x) return null;
       const seq = [x, aya(x.s, x.a + 1), aya(x.s, x.a + 2), aya(x.s, x.a + 3)];
       const labels = distinctPrefixes(seq.map(a => a.tk), 5, 12);
       const items = seq.map((a, i) => ({ a, html: labels[i], pos: i }));
-      return { mode, target: x, seq, prompt: `Remets ces ayas dans l’ordre (${esc(surahName(x.s))})`, items: shuffle(items) };
+      return { mode, target: x, seq, prompt: `Remets ces ayat dans l’ordre (${esc(surahName(x.s))})`, items: shuffle(items) };
     }
     case 'recite': {
       let t = S.settings.reciteType; if (t === 'mix') t = Math.random() < .5 ? 'suite' : 'fin';
       if (t === 'suite') {
-        const x = pickTarget(a => !!next(a)); if (!x) return null;
+        const x = pickTarget(a => inPool(next(a))); if (!x) return null;
         return { mode, sub: 'suite', target: next(x), show: x, prompt: 'Récite l’aya suivante', expected: next(x).tk };
       }
       const x = pickTarget(a => a.tk.length >= 4); if (!x) return null;
@@ -315,7 +319,7 @@ function newCard() {
     const modes = S.current === 'mix' ? enabledModes() : [S.current];
     q = buildQuestion(pick(modes.length ? modes : ['suivante']));
   }
-  if (!q) { deck.innerHTML = `<div class="empty">Pas assez d’ayas pour ce mode.<br>Ajoute des sourates ou change de mode.</div>`; return; }
+  if (!q) { deck.innerHTML = `<div class="empty">Pas assez d’ayat pour ce mode.<br>Ajoute des sourates ou change de mode.</div>`; return; }
   const back = document.createElement('div'); back.className = 'card back'; deck.appendChild(back);
   const card = document.createElement('div'); card.className = 'card'; deck.appendChild(card);
   currentCard = { q, el: card, answered: false, g: null };
@@ -344,7 +348,7 @@ function renderCard(c) {
 
 function setHint(c) {
   const h = $('#deckHint');
-  if (!c.answered) h.textContent = c.q.mode === 'recite' ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Touche les ayas dans l’ordre' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.mode === 'recite' ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Touche les ayat dans l’ordre' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -479,9 +483,9 @@ function swipeOut(c, dir) {
 
 /* ---------- Sourates ---------- */
 function surahMastery(s) {
-  const n = SURAHS[s - 1].count; let m = 0;
-  for (let a = 1; a <= n; a++) { const r = S.srs[s + ':' + a]; if (r && r.b >= 4) m++; }
-  return m / n;
+  const [f, t] = range(s); let m = 0;
+  for (let a = f; a <= t; a++) { const r = S.srs[s + ':' + a]; if (r && r.b >= 4) m++; }
+  return m / (t - f + 1);
 }
 function renderSurahs() {
   const q = $('#surahSearch').value.trim().toLowerCase();
@@ -493,18 +497,32 @@ function renderSurahs() {
   }
   $('#surahList').innerHTML = Object.keys(groups).map(j => `<div class="juz"><h3>Juz ${j}<button data-juz="${j}">tout</button></h3>${groups[j].map(s => `
     <label class="srow"><input type="checkbox" data-s="${s.i}" ${sel.has(s.i) ? 'checked' : ''}>
-      <span class="n">${s.i}</span><span class="t"><b>${esc(s.tr)}</b><small>${esc(s.fr)} · ${s.count} ayas</small></span>
+      <span class="n">${s.i}</span><span class="t"><b>${esc(s.tr)}</b><small>${esc(s.fr)} · ${s.count} ayat</small></span>
       ${sel.has(s.i) ? `<span class="m" title="maîtrise"><i style="width:${Math.round(surahMastery(s.i) * 100)}%"></i></span>` : ''}
-      <span class="a">${s.ar}</span></label>`).join('')}</div>`).join('');
-  const nA = AYAS.filter(a => sel.has(a.s)).length;
-  $('#selCount').textContent = `${S.selected.length} sourate${S.selected.length > 1 ? 's' : ''} cochée${S.selected.length > 1 ? 's' : ''} · ${nA} ayas en révision`;
+      <span class="a">${s.ar}</span></label>${sel.has(s.i) && s.count > 1 ? rangeRow(s) : ''}`).join('')}</div>`).join('');
+  const nA = POOL.length;
+  $('#selCount').textContent = `${S.selected.length} sourate${S.selected.length > 1 ? 's' : ''} cochée${S.selected.length > 1 ? 's' : ''} · ${nA} ayat en révision`;
+}
+function rangeRow(s) {
+  const [f, t] = range(s.i), all = f === 1 && t === s.count;
+  return `<div class="range"><span>Ayat</span><input type="number" inputmode="numeric" min="1" max="${s.count}" value="${f}" data-rf="${s.i}" aria-label="Première aya">
+    <span>à</span><input type="number" inputmode="numeric" min="1" max="${s.count}" value="${t}" data-rt="${s.i}" aria-label="Dernière aya">
+    <span class="rn">${t - f + 1}/${s.count}</span>${all ? '' : `<button data-rall="${s.i}">Toutes</button>`}</div>`;
+}
+function setRange(s, f, t) {
+  const n = SURAHS[s - 1].count; f = Math.max(1, Math.min(+f || 1, n)); t = Math.max(1, Math.min(+t || n, n)); if (f > t) [f, t] = [t, f];
+  S.ranges = S.ranges || {}; if (f === 1 && t === n) delete S.ranges[s]; else S.ranges[s] = [f, t];
+  save(); buildPool(); renderSurahs();
 }
 function setSelected(list) { S.selected = [...new Set(list)].sort((a, b) => a - b); save(); buildPool(); renderSurahs(); }
 $('#surahList').addEventListener('change', e => {
-  const s = +e.target.dataset.s; if (!s) return;
+  const d = e.target.dataset;
+  if (d.rf || d.rt) { const s = +(d.rf || d.rt), [f, t] = range(s); return setRange(s, d.rf ? e.target.value : f, d.rt ? e.target.value : t); }
+  const s = +d.s; if (!s) return;
   setSelected(e.target.checked ? [...S.selected, s] : S.selected.filter(x => x !== s));
 });
 $('#surahList').addEventListener('click', e => {
+  if (e.target.dataset.rall) return setRange(+e.target.dataset.rall, 1, 1e9);
   const j = e.target.dataset.juz; if (!j) return; e.preventDefault();
   const ids = SURAHS.filter(s => s.juz === +j).map(s => s.i);
   const all = ids.every(i => S.selected.includes(i));
@@ -534,9 +552,9 @@ function renderStats() {
     <div class="tile"><b>🔥 ${streak()}</b><span>jours d’affilée</span></div>
     <div class="tile"><b>${S.days[today()] || 0}</b><span>cartes aujourd’hui</span></div>
     <div class="tile"><b>${pct} %</b><span>réussite globale (${S.total.n})</span></div>
-    <div class="tile"><b>${due}</b><span>ayas à revoir maintenant</span></div>
-    <div class="tile"><b>${mastered}/${POOL.length}</b><span>ayas maîtrisées</span></div>
-    <div class="tile"><b>${seen}</b><span>ayas déjà vues</span></div></div>`;
+    <div class="tile"><b>${due}</b><span>ayat à revoir maintenant</span></div>
+    <div class="tile"><b>${mastered}/${POOL.length}</b><span>ayat maîtrisées</span></div>
+    <div class="tile"><b>${seen}</b><span>ayat déjà vues</span></div></div>`;
   // 30 derniers jours
   html += `<h2>30 derniers jours</h2><div class="heat">`;
   const max = Math.max(1, ...Object.values(S.days));
@@ -547,8 +565,8 @@ function renderStats() {
   html += `</div>`;
   // par sourate
   const rows = S.selected.map(s => {
-    const n = SURAHS[s - 1].count; let m = 0, l = 0, w = 0;
-    for (let a = 1; a <= n; a++) { const r = S.srs[s + ':' + a]; if (!r) continue; if (r.b >= 4) m++; else if (r.b >= 2) l++; else w++; }
+    const [f, t] = range(s), n = t - f + 1; let m = 0, l = 0, w = 0;
+    for (let a = f; a <= t; a++) { const r = S.srs[s + ':' + a]; if (!r) continue; if (r.b >= 4) m++; else if (r.b >= 2) l++; else w++; }
     const st = S.surah[s] || { n: 0, ok: 0 };
     return { s, n, m, l, w, rate: st.n ? st.ok / st.n : null };
   }).sort((a, b) => (a.rate ?? 2) - (b.rate ?? 2));
@@ -567,7 +585,7 @@ function renderSettings() {
   $('#settingsBox').innerHTML = `
   <h2>Modes de jeu</h2><div class="set">${Object.entries(MODES).map(([k, m]) => `<label>${m.icon} ${m.label}<input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>
   <h2>Options</h2><div class="set">
-    <label><span>Pièges (ayas qui se ressemblent)<small>Les mauvaises réponses sont des mutashabihat</small></span><input type="checkbox" data-set="pieges" ${st.pieges ? 'checked' : ''}></label>
+    <label><span>Pièges (ayat qui se ressemblent)<small>Les mauvaises réponses sont des mutashabihat</small></span><input type="checkbox" data-set="pieges" ${st.pieges ? 'checked' : ''}></label>
     <label><span>Traduction française<small>Hamidullah</small></span><input type="checkbox" data-set="trad" ${st.trad ? 'checked' : ''}></label>
     <label><span>Lecture audio automatique<small>Mode écoute + correction</small></span><input type="checkbox" data-set="autoplay" ${st.autoplay ? 'checked' : ''}></label>
     <label><span>Reconnaissance vocale<small>${SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation'}</small></span><input type="checkbox" data-set="voice" ${st.voice ? 'checked' : ''} ${SR ? '' : 'disabled'}></label>

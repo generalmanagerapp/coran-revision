@@ -117,3 +117,7 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:600;z-index:10}
 .foot{font-size:11.5px;color:#6f877b;text-align:center;margin-top:20px;line-height:1.5}
+.range{display:flex;align-items:center;gap:8px;margin:-2px 0 8px 40px;padding:6px 10px;font-size:13px;color:#b9c9c0;background:#0d241d;border-radius:10px;flex-wrap:wrap}
+.range input{width:62px;padding:6px 8px;border-radius:8px;border:1px solid #2c5446;background:#0b1f19;color:#fff;font-size:15px;text-align:center}
+.range .rn{color:#8fa79b;font-size:12px}
+.range button{margin-left:auto;background:none;border:1px solid #3a5f52;color:#cfe0d7;border-radius:8px;font:600 12px system-ui;padding:5px 9px}
