@@ -1,7 +1,14 @@
 {
-  "version": "1.7.1",
+  "version": "1.7.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.7.2",
+      "date": "2026-11-22",
+      "notes": [
+        "Écran d'ouverture : une seule fois par jour"
+      ]
+    },
     {
       "version": "1.7.1",
       "date": "2026-11-22",

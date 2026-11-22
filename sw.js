@@ -1,5 +1,5 @@
-const CACHE = 'coran-revision-v1.7.1';
-const SHELL = ['./', 'index.html', 'style.css?v=1.7.1', 'app.js?v=1.7.1', 'manifest.webmanifest', 'data/quran.json', 'data/hadiths.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/logo-mark.svg', 'icons/favicon-32.png', 'icons/apple-touch-icon.png', 'icons/icon-maskable-512.png', 'fonts/amiri-quran-arabic-400-normal.woff2'];
+const CACHE = 'coran-revision-v1.7.2';
+const SHELL = ['./', 'index.html', 'style.css?v=1.7.2', 'app.js?v=1.7.2', 'manifest.webmanifest', 'data/quran.json', 'data/hadiths.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/logo-mark.svg', 'icons/favicon-32.png', 'icons/apple-touch-icon.png', 'icons/icon-maskable-512.png', 'fonts/amiri-quran-arabic-400-normal.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

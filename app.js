@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.7.1';
+const VERSION = '1.7.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -865,7 +865,7 @@ function renderSettings() {
      <div class="set">${chk('trad', 'Traduction française', 'Hamidullah')}</div>`)}
   ${sec('goal', 'target-arrow', 'Objectif & accueil', `${st.goal} cartes par jour`,
     `<div class="set"><label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
-     ${chk('opening', 'Écran d’ouverture', 'Petite duaa + hadith du jour')}</div>`)}
+     ${chk('opening', 'Écran d’ouverture', 'Duaa + hadith du jour, à la 1re ouverture de la journée')}</div>`)}
   ${sec('ex', 'cards', 'Exercices', `${nMod} sur ${total} actifs`,
     Object.entries(GROUPS).map(([g, gl]) => `<h4>${gl}</h4><div class="set">${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `<label><span class="mlab">${ic(m.icon)} ${m.label}<small>${m.d}</small></span><input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>`).join(''))}
   ${sec('game', 'device-gamepad-2', 'Options de jeu', st.pieges ? 'Pièges activés' : 'Pièges désactivés',
@@ -974,8 +974,9 @@ const DUAS = [[20, 25, 28], [3, 8, 8], [2, 201, 201], [14, 40, 41], [7, 23, 23],
 let HADITHS = [];
 const dayNum = () => { const d = new Date(); return Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5) + d.getFullYear() * 366; };
 async function showOpening() {
-  if (!S.settings.opening || sessionStorage.getItem('opened')) return;
-  sessionStorage.setItem('opened', '1');
+  // une seule fois par jour : à la première ouverture de la journée
+  if (!S.settings.opening || S.lastOpening === today()) return;
+  S.lastOpening = today(); save();
   try { if (!HADITHS.length) HADITHS = await (await fetch('data/hadiths.json')).json(); } catch (e) {}
   const dn = dayNum(), [ds, da, db] = DUAS[dn % DUAS.length], ay = [];
   for (let a = da; a <= db; a++) ay.push(aya(ds, a));
