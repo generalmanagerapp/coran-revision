@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Révision Coran</title>
+<meta name="theme-color" content="#0f2a22">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preload" href="fonts/amiri-quran-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand"><span class="logo">۞</span> Révision Coran</div>
+    <div id="sessionInfo" class="session"></div>
+  </header>
+
+  <main>
+    <!-- RÉVISER -->
+    <section id="view-revise" class="view active">
+      <div id="modeBar" class="modebar"></div>
+      <div id="deck" class="deck"></div>
+      <div id="deckHint" class="hint"></div>
+    </section>
+
+    <!-- SOURATES -->
+    <section id="view-surahs" class="view">
+      <div class="toolbar">
+        <input id="surahSearch" type="search" placeholder="Rechercher une sourate…">
+      </div>
+      <div class="quick">
+        <button data-quick="amma">Juz ʿAmma</button>
+        <button data-quick="tabarak">Juz Tabārak</button>
+        <button data-quick="none">Tout décocher</button>
+      </div>
+      <div id="selCount" class="selcount"></div>
+      <div id="surahList"></div>
+    </section>
+
+    <!-- STATS -->
+    <section id="view-stats" class="view"><div id="statsBox"></div></section>
+
+    <!-- RÉGLAGES -->
+    <section id="view-settings" class="view"><div id="settingsBox"></div></section>
+  </main>
+
+  <nav class="tabs">
+    <button data-view="revise" class="on"><span>🃏</span>Réviser</button>
+    <button data-view="surahs"><span>📖</span>Sourates</button>
+    <button data-view="stats"><span>📊</span>Suivi</button>
+    <button data-view="settings"><span>⚙️</span>Réglages</button>
+  </nav>
+</div>
+<div id="loading" class="loading">Chargement du Coran…</div>
+<script src="app.js"></script>
+</body>
+</html>

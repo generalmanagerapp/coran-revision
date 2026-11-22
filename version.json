@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "date": "2026-11-22",
+  "changelog": [
+    {"version": "1.0.0", "date": "2026-11-22", "notes": ["Première version : cartes à glisser, 8 modes (aya suivante/précédente, compléter, mot manquant, quelle sourate, ordre, récitation vocale, écoute), pièges mutashabihat, répétition espacée, suivi par sourate, PWA hors ligne"]}
+  ]
+}
