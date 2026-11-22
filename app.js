@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -837,31 +837,37 @@ function renderStats() {
 }
 
 /* ---------- Réglages ---------- */
+const openSec = new Set();
 function renderSettings() {
   const st = S.settings;
-  $('#settingsBox').innerHTML = `
-  <h2>Thème</h2><div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
-  <h2>Objectif & accueil</h2><div class="set">
-    <label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
-    <label><span>Écran d’ouverture<small>Petite duaa + hadith du jour</small></span><input type="checkbox" data-set="opening" ${st.opening ? 'checked' : ''}></label>
+  const sec = (id, icon, title, sub, body) => `<details class="sec" data-sec="${id}" ${openSec.has(id) ? 'open' : ''}><summary><span class="si">${icon}</span><span class="st">${title}<small>${sub}</small></span><span class="chev">›</span></summary><div class="sec-b">${body}</div></details>`;
+  const chk = (key, label, sub, extra = '') => `<label><span>${label}${sub ? `<small>${sub}</small>` : ''}</span><input type="checkbox" data-set="${key}" ${st[key] ? 'checked' : ''} ${extra}></label>`;
+  const nMod = enabledModes().length, total = Object.keys(MODES).length;
+  $('#settingsBox').innerHTML = `<div class="secs">
+  ${sec('look', '🎨', 'Apparence', (THEMES[st.theme] || THEMES.emeraude).name,
+    `<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
+     <div class="set">${chk('trad', 'Traduction française', 'Hamidullah')}</div>`)}
+  ${sec('goal', '🎯', 'Objectif & accueil', `${st.goal} cartes par jour`,
+    `<div class="set"><label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
+     ${chk('opening', 'Écran d’ouverture', 'Petite duaa + hadith du jour')}</div>`)}
+  ${sec('ex', '🃏', 'Exercices', `${nMod} sur ${total} actifs`,
+    Object.entries(GROUPS).map(([g, gl]) => `<h4>${gl}</h4><div class="set">${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `<label><span>${m.icon} ${m.label}<small>${m.d}</small></span><input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>`).join(''))}
+  ${sec('game', '🎮', 'Options de jeu', st.pieges ? 'Pièges activés' : 'Pièges désactivés',
+    `<div class="set">${chk('pieges', 'Pièges (ayat qui se ressemblent)', 'Les mauvaises réponses sont des mutashabihat')}
+     ${chk('voice', 'Reconnaissance vocale', SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation', SR ? '' : 'disabled')}
+     <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Aya suivante'], ['fin', 'Fin de l’aya']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
+  ${sec('audio', '🔊', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
+    `<div class="set"><label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
+     ${chk('autoplay', 'Lecture audio automatique', 'Mode écoute + correction')}</div>`)}
+  ${sec('save', '💾', 'Sauvegarde', 'Exporter / importer ta progression',
+    `<div class="set" style="padding:12px"><p class="muted" style="margin:0 0 10px">Garde une copie de ta progression ou transfère-la sur un autre téléphone.</p>
+     <div class="btnrow" style="margin:0"><button class="btn gold" data-export>⬇️ Exporter</button><button class="btn light" data-import>⬆️ Importer</button></div>
+     <input type="file" accept=".json,application/json" data-importfile hidden></div>`)}
+  ${sec('data', '🗑️', 'Données', 'Réinitialiser le suivi',
+    `<button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>`)}
   </div>
-  <h2>Modes de jeu</h2><div class="set">${Object.entries(MODES).map(([k, m]) => `<label>${m.icon} ${m.label}<input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>
-  <h2>Options</h2><div class="set">
-    <label><span>Pièges (ayat qui se ressemblent)<small>Les mauvaises réponses sont des mutashabihat</small></span><input type="checkbox" data-set="pieges" ${st.pieges ? 'checked' : ''}></label>
-    <label><span>Traduction française<small>Hamidullah</small></span><input type="checkbox" data-set="trad" ${st.trad ? 'checked' : ''}></label>
-    <label><span>Lecture audio automatique<small>Mode écoute + correction</small></span><input type="checkbox" data-set="autoplay" ${st.autoplay ? 'checked' : ''}></label>
-    <label><span>Reconnaissance vocale<small>${SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation'}</small></span><input type="checkbox" data-set="voice" ${st.voice ? 'checked' : ''} ${SR ? '' : 'disabled'}></label>
-    <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Aya suivante'], ['fin', 'Fin de l’aya']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
-  </div>
-  <h2>Sauvegarde</h2><div class="set" style="padding:12px">
-    <p class="muted" style="margin:0 0 10px">Garde une copie de ta progression ou transfère-la sur un autre téléphone.</p>
-    <div class="btnrow" style="margin:0"><button class="btn gold" data-export>⬇️ Exporter</button><button class="btn light" data-import>⬆️ Importer</button></div>
-    <input type="file" accept=".json,application/json" data-importfile hidden>
-  </div>
-  <h2>Données</h2>
-  <button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>
   <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br>Version ${VERSION}</div>`;
+  $$('#settingsBox details').forEach(d => d.addEventListener('toggle', () => { d.open ? openSec.add(d.dataset.sec) : openSec.delete(d.dataset.sec); }));
 }
 $('#settingsBox').addEventListener('change', e => {
   const t = e.target;
@@ -869,7 +875,7 @@ $('#settingsBox').addEventListener('change', e => {
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
   if (t.dataset.sel) { S.settings[t.dataset.sel] = t.dataset.sel === 'goal' ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
   if (t.hasAttribute('data-importfile') && t.files[0]) return importData(t.files[0]);
-  save(); renderModeBar();
+  save(); renderModeBar(); renderSettings();
 });
 $('#settingsBox').addEventListener('click', e => {
   if (e.target.closest('[data-export]')) return exportData();

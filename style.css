@@ -294,3 +294,22 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .opening .fr{font-style:italic}
 .opening .hd{font-size:14.5px;line-height:1.55;margin:0;text-align:left}
 .opening small{display:block;color:var(--muted);font-size:12px;margin-top:8px}
+
+/* réglages dépliables */
+.secs{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.sec{background:var(--bg2);border-radius:16px;border:1px solid var(--line2);overflow:hidden}
+.sec summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer}
+.sec summary::-webkit-details-marker{display:none}
+.sec .si{font-size:22px;width:28px;text-align:center}
+.sec .st{flex:1;font-weight:600;font-size:15px}
+.sec .st small{display:block;font-weight:400;font-size:12px;color:var(--text3);margin-top:1px}
+.sec .chev{font-size:22px;color:var(--text3);transition:transform .2s}
+.sec[open] .chev{transform:rotate(90deg)}
+.sec[open] summary{border-bottom:1px solid var(--line2)}
+.sec-b{padding:10px 12px 12px}
+.sec-b .set{background:var(--bg);margin-bottom:0}
+.sec-b .themes{margin-bottom:10px}
+.sec-b .theme{background:var(--bg)}
+.sec-b h4{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:10px 2px 6px}
+.sec-b h4:first-child{margin-top:2px}
+.sec-b .danger{margin-top:0}

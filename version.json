@@ -1,7 +1,14 @@
 {
-  "version": "1.6.0",
+  "version": "1.6.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.6.1",
+      "date": "2026-11-22",
+      "notes": [
+        "Réglages rangés par sections dépliables"
+      ]
+    },
     {
       "version": "1.6.0",
       "date": "2026-11-22",
