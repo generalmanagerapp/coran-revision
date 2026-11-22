@@ -1,7 +1,7 @@
 /* Révision Coran — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -354,7 +354,7 @@ function finish(c, g, html) {
   const t = c.q.target;
   const msg = { ok: '✅ Bravo !', mid: '🟠 Presque', ko: '❌ Raté' }[g];
   let out = html || `<div class="result ${g}">${msg}</div>`;
-  if (!html) out += revealBlock(t, c.q);
+  if (!html) out += revealBlock(t, c.q) + `<div class="btnrow"><button class="btn gold" data-nextcard>Suivant →</button></div>`;
   $('[data-after]', c.el).innerHTML = out;
   grade(t, g);
   setHint(c);
@@ -441,7 +441,9 @@ function finishSelf(c, g) { if (c.graded) return; c.graded = true; grade(c.q.tar
 function attachSwipe(c) {
   const el = c.el; let sx = 0, sy = 0, dx = 0, drag = false, locked = null;
   el.addEventListener('pointerdown', e => {
-    if (!c.answered || e.target.closest('button')) return;
+    if (!c.answered) return;
+    const b = e.target.closest('button');
+    if (b && !b.classList.contains('opt')) return;
     drag = true; locked = null; sx = e.clientX; sy = e.clientY; dx = 0;
   });
   el.addEventListener('pointermove', e => {
@@ -449,7 +451,9 @@ function attachSwipe(c) {
     const mx = e.clientX - sx, my = e.clientY - sy;
     if (locked === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
     if (locked !== 'x') return;
-    dx = mx; el.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    if (!el.hasPointerCapture(e.pointerId)) try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    dx = mx;
     el.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
     $('.stamp.r', el).style.opacity = Math.max(0, Math.min(1, dx / 90));
     $('.stamp.l', el).style.opacity = Math.max(0, Math.min(1, -dx / 90));
@@ -462,6 +466,8 @@ function attachSwipe(c) {
     } else { el.style.transition = 'transform .2s'; el.style.transform = ''; $$('.stamp', el).forEach(s => s.style.opacity = 0); setTimeout(() => el.style.transition = '', 200); }
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  // secours tactile : empêche le navigateur de récupérer le geste horizontal
+  el.addEventListener('touchmove', e => { if (drag && locked === 'x') e.preventDefault(); }, { passive: false });
 }
 function swipeOut(c, dir) {
   if (c.out) return; c.out = true;
