@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.4.1';
+const VERSION = '1.5.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -380,6 +380,7 @@ function newCard() {
   const card = document.createElement('div'); card.className = 'card'; deck.appendChild(card);
   currentCard = { q, el: card, answered: false, g: null };
   renderCard(currentCard);
+  attachOrderDrag(currentCard);
   attachSwipe(currentCard);
 }
 
@@ -389,7 +390,8 @@ function renderCard(c) {
   if (q.show) body += arBlock(q.show.ar) + frBlock(q.show) + refLine(q.show);
   if (q.showHtml) body += q.showHtml;
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
-  if (q.items) body += `<div class="opts">${q.items.map((it, i) => `<button class="opt" data-item="${i}">${it.html}</button>`).join('')}</div>`;
+  if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ot">${it.html}</span></div>`).join('')}</div>
+    <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>✔ Valider l’ordre</button></div>`;
   if (q.mode === 'recite') {
     body += `<div class="btnrow">${SR && S.settings.voice ? `<button class="btn gold" data-mic>🎙️ Réciter</button>` : ''}<button class="btn light" data-reveal>👁️ Révéler</button></div><div class="transcript" data-tr></div>`;
   }
@@ -404,7 +406,7 @@ function renderCard(c) {
 
 function setHint(c) {
   const h = $('#deckHint');
-  if (!c.answered) h.textContent = c.q.mode === 'recite' ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Touche les ayat dans l’ordre' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.mode === 'recite' ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Fais glisser les ayat dans le bon ordre, puis valide' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -451,11 +453,51 @@ document.addEventListener('click', e => {
     if (c.step === 4) finish(c, c.err === 0 ? 'ok' : c.err === 1 ? 'mid' : 'ko');
     return;
   }
+  if (b.hasAttribute('data-ordcheck')) return checkOrder(c);
   if (b.hasAttribute('data-mic')) return toggleMic(c, b);
   if (b.hasAttribute('data-reveal')) return revealRecite(c);
   if (b.dataset.self) { finishSelf(c, b.dataset.self); return swipeOut(c, b.dataset.self === 'ko' ? -1 : 1); }
   if (b.hasAttribute('data-nextcard')) return swipeOut(c, 1);
 });
+
+/* Remettre en ordre : glisser-déposer */
+function attachOrderDrag(c) {
+  const box = $('[data-ord]', c.el); if (!box) return;
+  const GAP = 8; let drag = null;
+  box.addEventListener('pointerdown', e => {
+    if (c.answered) return;
+    const it = e.target.closest('.ord-item'); if (!it) return;
+    e.preventDefault(); e.stopPropagation();
+    try { it.setPointerCapture(e.pointerId); } catch (_) {}
+    drag = { it, y0: e.clientY }; it.classList.add('dragging');
+  });
+  box.addEventListener('pointermove', e => {
+    if (!drag) return; e.preventDefault();
+    const it = drag.it; let dy = e.clientY - drag.y0;
+    const nx = it.nextElementSibling, pv = it.previousElementSibling;
+    // on déplace les voisins (jamais l'élément tenu, pour garder la capture du doigt)
+    if (nx && dy > nx.offsetHeight / 2) { box.insertBefore(nx, it); drag.y0 += nx.offsetHeight + GAP; }
+    else if (pv && dy < -pv.offsetHeight / 2) { box.insertBefore(pv, it.nextElementSibling); drag.y0 -= pv.offsetHeight + GAP; }
+    dy = e.clientY - drag.y0;
+    it.style.transform = `translateY(${dy}px)`;
+  });
+  const end = () => { if (!drag) return; drag.it.style.transform = ''; drag.it.classList.remove('dragging'); drag = null; };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+}
+function checkOrder(c) {
+  if (c.answered) return;
+  const q = c.q, els = $$('[data-ord] .ord-item', c.el);
+  const key = a => a.nw.join(' ');   // deux ayat identiques sont interchangeables
+  let wrong = 0;
+  els.forEach((el, p) => {
+    const it = q.items[+el.dataset.idx], ok = key(it.a) === key(q.seq[p]);
+    if (!ok) wrong++;
+    el.classList.add(ok ? 'good' : 'bad');
+    el.querySelector('.grip').outerHTML = `<span class="num">${ok ? p + 1 : q.seq.findIndex(a => key(a) === key(it.a)) + 1}</span>`;
+  });
+  $('[data-ordrow]', c.el).remove();
+  finish(c, wrong === 0 ? 'ok' : wrong <= 2 ? 'mid' : 'ko');
+}
 
 /* Récitation */
 let recog = null;

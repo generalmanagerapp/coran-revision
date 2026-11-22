@@ -234,3 +234,9 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 #toast.on{opacity:1;transform:translateX(-50%)}
 
 .brand-ar{font-family:var(--ar);font-weight:400;font-size:18px;color:var(--gold);margin-left:6px}
+
+/* remettre en ordre */
+.card .ord-item{touch-action:none;display:flex;align-items:center;gap:10px;cursor:grab;position:relative;transition:box-shadow .15s}
+.card .ord-item .ot{flex:1}
+.grip{font-family:var(--font);font-size:20px;color:var(--muted);direction:ltr;flex-shrink:0}
+.ord-item.dragging{z-index:5;box-shadow:0 10px 24px rgba(0,0,0,.25);transition:none;cursor:grabbing;border-color:var(--gold)}
