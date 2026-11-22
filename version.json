@@ -1,7 +1,14 @@
 {
-  "version": "1.7.0",
+  "version": "1.7.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.7.1",
+      "date": "2026-11-22",
+      "notes": [
+        "Mise à jour fiable : plus de mélange entre ancienne et nouvelle version"
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "2026-11-22",
