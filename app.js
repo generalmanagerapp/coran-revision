@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.5.1';
+const VERSION = '1.5.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -111,6 +111,7 @@ async function loadData() {
       AYAS.push(a);
     });
   });
+  for (const a of AYAS) { const k = tkey(a); if (!SAME.has(k)) SAME.set(k, []); SAME.get(k).push(a); }
   // index inversé pour retrouver les ayat proches (mutashabihat)
   for (const a of AYAS) for (const w of new Set(a.nw)) {
     if (!w) continue;
@@ -120,6 +121,9 @@ async function loadData() {
   }
 }
 const aya = (s, a) => AYA_IDX.get(s + ':' + a);
+const tkey = a => a.nw.join(' ');
+let SAME = new Map();   // texte normalisé → ayat identiques (ex. فبأي آلاء ربكما تكذبان)
+const sameText = a => SAME.get(tkey(a)) || [a];
 const next = x => aya(x.s, x.a + 1);
 const prev = x => aya(x.s, x.a - 1);
 const surahName = s => SURAHS[s - 1].tr;
@@ -238,10 +242,10 @@ function distinctSuffixes(list, min = 5, max = 40) {
   return list.map((t, i) => { const L = Math.min(t.length, rev[i].replace(' …', '').split(' ').length); return (t.length > L ? '… ' : '') + t.slice(t.length - L).join(' '); });
 }
 const fill = (arr, more) => { const ids = new Set(arr.map(x => x.id)); for (const m of more) if (arr.length < 4 && !ids.has(m.id)) { arr.push(m); ids.add(m.id); } return arr; };
-function distractorsFor(correct, exclude = []) {
+function distractorsFor(correct, exclude = [], ok = () => true) {
   const ex = new Set([correct.id, ...exclude.map(x => x.id)]);
   const seen = new Set([correct.nw.join(' ')]);
-  const uniq = a => { const k = a.nw.join(' '); if (seen.has(k)) return false; seen.add(k); return true; };
+  const uniq = a => { const k = a.nw.join(' '); if (seen.has(k) || !ok(a)) return false; seen.add(k); return true; };
   const d = (S.settings.pieges ? similar(correct, 8, { exclude: ex }) : []).filter(uniq).slice(0, 3);
   const more = shuffle(POOL.length > 6 ? POOL : AYAS).filter(x => !ex.has(x.id)).slice(0, 30).filter(uniq);
   return fill([correct, ...d], more).slice(1, 4);
@@ -254,21 +258,25 @@ function buildQuestion(mode) {
       const isNext = mode === 'suivante';
       const x = pickTarget(a => isNext ? inPool(next(a)) : inPool(prev(a))); if (!x) return null;
       const ans = isNext ? next(x) : prev(x);
-      const opts = shuffle([ans, ...distractorsFor(ans, [x])]);
+      // si l'aya affichée existe ailleurs à l'identique, ce qui la suit là-bas est aussi juste → on l'écarte des leurres
+      const valid = new Set(sameText(x).map(y => isNext ? next(y) : prev(y)).filter(Boolean).map(tkey));
+      const opts = shuffle([ans, ...distractorsFor(ans, [x], o => !valid.has(tkey(o)))]);
       const labels = distinctPrefixes(opts.map(o => o.tk));
       return { mode, target: ans, prompt: isNext ? 'Quelle aya vient juste après ?' : 'Quelle aya vient juste avant ?',
-        show: x, opts: opts.map((o, i) => ({ html: labels[i], good: o.id === ans.id, aya: o })) };
+        show: x, opts: opts.map((o, i) => ({ html: labels[i], good: valid.has(tkey(o)), aya: o })) };
     }
     case 'complete': {
       const x = pickTarget(a => a.tk.length >= 4); if (!x) return null;
       const h = Math.min(Math.ceil(x.tk.length / 2), 12);
       const start = x.tk.slice(0, h);
-      let others = S.settings.pieges ? similar(x, 6, { words: x.nw.slice(0, h + 2), filter: b => b.tk.length >= 4 }) : [];
+      const startKey = x.nw.slice(0, h).join(' ');
+      const notSameStart = b => b.nw.slice(0, h).join(' ') !== startKey;
+      let others = S.settings.pieges ? similar(x, 8, { words: x.nw.slice(0, h + 2), filter: b => b.tk.length >= 4 && notSameStart(b) }) : [];
       const endKey = o => o.id === x.id ? x.nw.slice(h).join(' ') : o.nw.slice(Math.min(Math.ceil(o.tk.length / 2), 12)).join(' ');
       const seenE = new Set([endKey(x)]);
       const uniqE = o => { const k = endKey(o); if (seenE.has(k)) return false; seenE.add(k); return true; };
       others = others.filter(uniqE);
-      fill(others = [x, ...others.slice(0, 3)], shuffle(POOL).filter(b => b.tk.length >= 4).slice(0, 30).filter(uniqE));
+      fill(others = [x, ...others.slice(0, 3)], shuffle(POOL).filter(b => b.tk.length >= 4 && notSameStart(b)).slice(0, 30).filter(uniqE));
       const opts = shuffle(others);
       const ends = opts.map(o => o.id === x.id ? x.tk.slice(h) : o.tk.slice(Math.min(Math.ceil(o.tk.length / 2), 12)));
       const labels = distinctPrefixes(ends, 4);
@@ -296,10 +304,12 @@ function buildQuestion(mode) {
     }
     case 'sourate': {
       const x = pickTarget(() => true); if (!x) return null;
+      const validS = new Set(sameText(x).map(y => y.s));
       const set = new Set([x.s]);
-      if (S.settings.pieges) for (const b of similar(x, 10)) { if (set.size < 4) set.add(b.s); }
-      for (const s of shuffle([...new Set(POOL.map(a => a.s))])) if (set.size < 4) set.add(s);
-      while (set.size < 4) set.add(1 + rand(114));
+      const addS = v => { if (set.size < 4 && !validS.has(v)) set.add(v); };
+      if (S.settings.pieges) for (const b of similar(x, 10)) addS(b.s);
+      for (const v of shuffle([...new Set(POOL.map(a => a.s))])) addS(v);
+      while (set.size < 4) addS(1 + rand(114));
       const opts = shuffle([...set]).map(s => ({ html: `${s}. ${esc(SURAHS[s - 1].tr)} <span style="font-family:var(--ar);float:right">${SURAHS[s - 1].ar}</span>`, good: s === x.s, fr: true }));
       return { mode, target: x, prompt: 'De quelle sourate vient cette aya ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
     }

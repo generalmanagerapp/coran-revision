@@ -1,7 +1,14 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.5.2",
+      "date": "2026-11-22",
+      "notes": [
+        "Ayat identiques : toutes les réponses justes sont acceptées, plus de faux « raté »"
+      ]
+    },
     {
       "version": "1.5.1",
       "date": "2026-11-22",
