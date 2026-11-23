@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -495,6 +495,14 @@ function openPicker() {
 }
 /* Défi chrono */
 let chall = null;
+function challengeIntro() {
+  stopAudio();
+  $('#deck').innerHTML = `<div class="card"><div class="body endc"><div class="big">${ic('stopwatch')}</div><h2>Défi 60 secondes</h2>
+    <p>Réponds à un maximum de questions rapides avant la fin du temps.</p>
+    <div class="score">${S.best || 0}<small> record</small></div>
+    <div class="btnrow"><button class="btn gold" data-startchall>Commencer</button></div></div></div>`;
+  $('#deckHint').textContent = '';
+}
 function startChallenge() {
   if (chall) clearInterval(chall.timer);
   chall = { end: Date.now() + 60000, ok: 0, n: 0 };
@@ -614,7 +622,8 @@ document.addEventListener('click', e => {
   if (b.dataset.playseq) { const [s, a, n] = b.dataset.playseq.split(':').map(Number); return playSeq(Array.from({ length: n }, (_, k) => aya(s, a + k))); }
   if (b.dataset.play) { const [s, a] = b.dataset.play.split(':').map(Number); return play(aya(s, a)); }
   if (b.hasAttribute('data-pick')) return openPicker();
-  if (b.dataset.mode) { const m = b.dataset.mode; if (chall && m !== 'defi') { clearInterval(chall.timer); chall = null; } S.current = m; save(); renderModeBar(); return m === 'defi' ? startChallenge() : newCard(); }
+  if (b.dataset.mode) { const m = b.dataset.mode; if (chall && m !== 'defi') { clearInterval(chall.timer); chall = null; } S.current = m; save(); renderModeBar(); return m === 'defi' ? challengeIntro() : newCard(); }
+  if (b.hasAttribute('data-startchall')) return startChallenge();
   const c = currentCard; if (!c || !c.el.contains(b)) return;
   const q = c.q;
   if (b.hasAttribute('data-listen')) return play(q.target);

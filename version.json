@@ -1,7 +1,14 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.0.1",
+      "date": "2026-11-23",
+      "notes": [
+        "Défi 60 s : écran avec bouton Commencer, le chrono ne part plus tout seul"
+      ]
+    },
     {
       "version": "2.0.0",
       "date": "2026-11-23",
