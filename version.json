@@ -1,7 +1,14 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.0.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Calligraphie du Mushaf de Médine (KFGQPC Uthmanic Hafs) pour tout le texte arabe"
+      ]
+    },
     {
       "version": "2.0.1",
       "date": "2026-11-23",

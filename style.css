@@ -1,3 +1,4 @@
+@font-face{font-family:'Uthmanic Hafs';src:url(fonts/uthmanic-hafs.woff2?v=2.0.2) format('woff2');font-display:swap}
 @font-face{font-family:'Amiri Quran';src:url(fonts/amiri-quran-arabic-400-normal.woff2) format('woff2');font-display:swap}
 :root,[data-theme=emeraude]{
   --bg:#0b1f19;--bg2:#0f2a22;--surface2:#0d241d;--bg-img:none;--text:#eef3ef;--text2:#b9c9c0;--text3:#8fa79b;--line2:#1d3d33;--line3:#2c5446;
@@ -6,7 +7,7 @@
   --good-bg:#e7f6ee;--good-fg:#1e7a50;--bad-bg:#fbe9e7;--bad-fg:#a8352c;--mid-bg:#fdf2dc;--mid-fg:#8a5d0b;--btn:#1c3a30;
   --r-card:22px;--r-opt:14px;--r-btn:14px;--r-chip:999px;--card-shadow:0 10px 30px rgba(0,0,0,.35);--card-border:0;--opt-bw:2px;--opt-shadow:none;--btn-border:0;--chip-bw:1px;
   --font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--font-title:var(--font);
-  --ar:'Amiri Quran','Scheherazade New','Traditional Arabic',serif;
+  --ar:'Uthmanic Hafs','Amiri Quran','Scheherazade New','Traditional Arabic',serif;
 }
 [data-theme=manuscrit]{
   --bg:#efe2c4;--bg2:#e6d5ae;--surface2:#e9dab8;--text:#3b2a1a;--text2:#5a3f26;--text3:#7a5a3a;--line2:#cdb48a;--line3:#b08a5a;
