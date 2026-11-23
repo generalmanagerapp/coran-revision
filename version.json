@@ -1,7 +1,14 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.8.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Plus d'audio automatique à l'ouverture de l'appli avant le premier toucher"
+      ]
+    },
     {
       "version": "1.8.1",
       "date": "2026-11-23",

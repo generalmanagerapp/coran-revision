@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.1';
+const VERSION = '1.8.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -247,6 +247,9 @@ function grade(a, g) { // g: 'ok' | 'mid' | 'ko'
 }
 
 /* ---------- Audio ---------- */
+// pas d'audio automatique tant que tu n'as pas touché l'écran (ouverture de l'appli)
+let userActed = false;
+addEventListener('pointerdown', () => { userActed = true; }, { once: true, capture: true });
 const player = new Audio();
 const dirIdx = {};
 function recDirs() { return (RECITERS[S.settings.reciter] || RECITERS.Alafasy_128kbps).d; }
@@ -528,7 +531,7 @@ function renderCard(c) {
     <div class="body">${body}</div>`;
   if (q.mode === 'sourate') $('.head span:last-child', el).textContent = 'Sourate ?';
   setHint(c);
-  if ((q.audio && S.settings.autoplay) || q.forcePlay) play(q.target);
+  if (userActed && ((q.audio && S.settings.autoplay) || q.forcePlay)) play(q.target);
   if (q.efface) { c.level = 0; renderEff(c); }
 }
 /* Effacement progressif : 0 texte complet → 1 un tiers caché → 2 deux tiers → 3 premières lettres → 4 rien */
@@ -710,7 +713,7 @@ function revealRecite(c) {
   c.answered = true; c.selfEval = true;
   $('[data-after]', c.el).innerHTML = revealBlock(c.q.target) + selfButtons();
   setHint(c);
-  if (S.settings.autoplay) play(c.q.target);
+  if (userActed && S.settings.autoplay) play(c.q.target);
 }
 const selfButtons = () => `<div class="btnrow"><button class="btn ko" data-self="ko">${ic('x')} Raté</button><button class="btn mid" data-self="mid">${ic('alert-circle')} Hésité</button><button class="btn ok" data-self="ok">${ic('check')} Su</button></div>`;
 function finishSelf(c, g) { if (c.graded) return; c.graded = true; grade(c.q.target, g); }
