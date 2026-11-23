@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.2';
+const VERSION = '1.8.3';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -933,6 +933,7 @@ $('#settingsBox').addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.modeT) { S.modes[t.dataset.modeT] = t.checked; if (!enabledModes().length) { S.modes[t.dataset.modeT] = true; t.checked = true; } }
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
+  if (t.dataset.set === 'opening' && t.checked) { S.lastOpening = null; save(); setTimeout(showOpening, 150); }
   if (t.dataset.sel) { S.settings[t.dataset.sel] = (t.dataset.sel === 'goal' || t.dataset.sel === 'arScale') ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
   if (t.hasAttribute('data-importfile') && t.files[0]) return importData(t.files[0]);
   save(); applyScale(); renderModeBar(); renderSettings();

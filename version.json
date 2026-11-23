@@ -1,7 +1,14 @@
 {
-  "version": "1.8.2",
+  "version": "1.8.3",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.8.3",
+      "date": "2026-11-23",
+      "notes": [
+        "Recocher l'écran d'ouverture dans les réglages l'affiche tout de suite"
+      ]
+    },
     {
       "version": "1.8.2",
       "date": "2026-11-23",
