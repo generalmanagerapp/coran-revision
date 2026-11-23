@@ -1,7 +1,14 @@
 {
-  "version": "1.9.1",
+  "version": "1.9.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Toutes les sourates cochées reviennent (nouvelles ayat réparties), plus de redite d'une aya réussie aujourd'hui, historique conservé entre les ouvertures"
+      ]
+    },
     {
       "version": "1.9.1",
       "date": "2026-11-23",

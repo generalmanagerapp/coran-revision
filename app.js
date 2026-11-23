@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.1';
+const VERSION = '1.9.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -199,11 +199,12 @@ const inPool = a => !!a && POOL_IDS.has(a.id);
 const rec = a => S.srs[a.s + ':' + a.a];
 
 // ayat vues récemment : on évite de les reproposer tout de suite
-const recent = [];
+const recent = (S.recentIds || []).slice();
 function rememberCard(q) {
   for (const a of [q.target, q.show, ...(q.seq || [])]) if (a) { const i = recent.indexOf(a.id); if (i >= 0) recent.splice(i, 1); recent.push(a.id); }
   const max = Math.max(3, Math.min(60, Math.floor(POOL.length * 0.7)));
   while (recent.length > max) recent.shift();
+  S.recentIds = recent.slice();
 }
 let weakMode = false;
 const isWeak = a => { const r = rec(a); return !!r && r.n > r.k && r.b <= 1; };
@@ -220,13 +221,19 @@ function pickTarget(filter, tgt = a => a) {
   const rs = new Set(recent), near = a => { const t = tgt(a); return rs.has(a.id) || rs.has(t.id) || (next(a) && rs.has(next(a).id)) || (prev(a) && rs.has(prev(a).id)); };
   const c1 = cand.filter(a => !near(a)), c2 = cand.filter(a => !rs.has(a.id) && !rs.has(tgt(a).id));
   cand = c1.length ? c1 : c2.length ? c2 : cand;
+  // déjà réussies aujourd'hui : on les laisse tranquilles (sauf s'il n'y a plus rien d'autre)
+  const okSet = new Set(S.okToday && S.okToday.d === today() ? S.okToday.ids : []);
+  const c3 = cand.filter(a => !okSet.has(a.id)); if (c3.length) cand = c3;
   const now = Date.now();
   const due = cand.filter(a => { const r = rec(a); return r && r.d <= now; }).sort((x, y) => rec(x).d - rec(y).d);
   const fresh = cand.filter(a => !rec(a));
   const r = Math.random();
-  if (due.length && r < 0.65) return pick(due.slice(0, 15));
-  if (fresh.length && r < 0.9) return pick(fresh);
-  // sinon : pondéré vers les boîtes basses
+  if (fresh.length && (r < 0.5 || !due.length)) {
+    // nouvelles ayat : on répartit entre TOUTES les sourates cochées (une sourate = une chance égale)
+    const by = new Map(); for (const a of fresh) { if (!by.has(a.s)) by.set(a.s, []); by.get(a.s).push(a); }
+    return pick(pick([...by.values()]));
+  }
+  if (due.length) return pick(due.slice(0, 15));
   const w = cand.map(a => 1 / (1 + ((rec(a) || {}).b || 0)));
   let t = Math.random() * w.reduce((x, y) => x + y, 0);
   for (let i = 0; i < cand.length; i++) { t -= w[i]; if (t <= 0) return cand[i]; }
@@ -235,7 +242,7 @@ function pickTarget(filter, tgt = a => a) {
 
 function grade(a, g) { // g: 'ok' | 'mid' | 'ko'
   const k = a.s + ':' + a.a, r = S.srs[k] || { b: 0, n: 0, k: 0 };
-  r.n++; if (g === 'ok') r.k++;
+  r.n++; if (g === 'ok') { r.k++; if (!S.okToday || S.okToday.d !== today()) S.okToday = { d: today(), ids: [] }; if (!S.okToday.ids.includes(a.id)) S.okToday.ids.push(a.id); }
   r.b = g === 'ok' ? Math.min(r.b + 1, SRS_STEPS.length - 1) : g === 'mid' ? Math.max(1, r.b - 1) : 0;
   r.d = Date.now() + SRS_STEPS[r.b];
   S.srs[k] = r;
