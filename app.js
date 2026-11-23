@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.7';
+const VERSION = '1.9.8';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -734,7 +734,7 @@ function scoreRecite(c, text) {
   const pre = c.q.sub === 'fin' ? c.q.target.tk.slice(0, c.q.startLen).join(' ') + ' ' : '';
   const t = c.q.target;
   c.answered = true; c.selfEval = true; c.suggested = g;
-  $('[data-after]', c.el).innerHTML = `<div class="result ${g}">${ic({ ok: 'circle-check', mid: 'alert-circle', ko: 'circle-x' }[g])} ${Math.round(ratio * 100)} % de correspondance</div>
+  $('[data-after]', c.el).innerHTML = `<div class="result ${g}">${ic({ ok: 'circle-check', mid: 'alert-circle', ko: 'circle-x' }[g])} ${Math.round(ratio * 100)} % des mots<small style="display:block;font-weight:400;opacity:.8">Voyelles non vérifiées : juge-les toi-même ci-dessous</small></div>
     <div class="reveal"><div class="ar ${arSize(t.ar)}">${pre}${shown}</div>${frBlock(t)}${refLine(t)}</div>${selfButtons()}`;
   setHint(c);
 }

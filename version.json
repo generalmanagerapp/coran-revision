@@ -1,7 +1,14 @@
 {
-  "version": "1.9.7",
+  "version": "1.9.8",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.8",
+      "date": "2026-11-23",
+      "notes": [
+        "Récitation : précision que les voyelles ne sont pas vérifiées par la reconnaissance vocale"
+      ]
+    },
     {
       "version": "1.9.7",
       "date": "2026-11-23",
