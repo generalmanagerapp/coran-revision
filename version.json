@@ -1,7 +1,14 @@
 {
-  "version": "2.0.2",
+  "version": "2.0.3",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.0.3",
+      "date": "2026-11-23",
+      "notes": [
+        "« aya/ayat » remplacé par « verset(s) » dans toute l'appli"
+      ]
+    },
     {
       "version": "2.0.2",
       "date": "2026-11-23",
