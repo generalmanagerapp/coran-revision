@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.1.2';
+const VERSION = '2.1.3';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -46,7 +46,6 @@ const RECITERS = {
   'Abdul_Basit_Murattal_192kbps': { n: 'Abdul Basit (murattal)', d: ['Abdul_Basit_Murattal_192kbps'] },
   'Husary_128kbps': { n: 'Mahmoud Al-Husary', d: ['Husary_128kbps'] },
   'Minshawy_Murattal_128kbps': { n: 'Al-Minshawi (murattal)', d: ['Minshawy_Murattal_128kbps'] },
-  'Abdurrahmaan_As-Sudais_192kbps': { n: 'Abdurrahman As-Sudais', d: ['Abdurrahmaan_As-Sudais_192kbps'] },
   'MaherAlMuaiqly128kbps': { n: 'Maher Al-Muaiqly', d: ['MaherAlMuaiqly128kbps'] },
 };
 // Début de chaque juz [sourate, aya]
@@ -94,6 +93,7 @@ const defaultState = () => ({
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
+if (!RECITERS[S.settings.reciter]) S.settings.reciter = 'Alafasy_128kbps';
 if (!S.srsV2) { for (const k in S.srs) { const r = S.srs[k]; if (r.b > 0) r.b = Math.max(1, r.b - 1); } S.srsV2 = 1; }
 if (S.ranges) { S.iv = S.iv || {}; for (const k in S.ranges) S.iv[k] = [S.ranges[k]]; delete S.ranges; }
 function load() {
