@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.0';
+const VERSION = '1.8.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -1111,7 +1111,6 @@ const dayNum = () => { const d = new Date(); return Math.floor((d - new Date(d.g
 async function showOpening() {
   // une seule fois par jour : à la première ouverture de la journée
   if (!S.settings.opening || S.lastOpening === today()) return;
-  S.lastOpening = today(); save();
   try { if (!HADITHS.length) HADITHS = await (await fetch('data/hadiths.json')).json(); } catch (e) {}
   const dn = dayNum(), [ds, da, db] = DUAS[dn % DUAS.length], ay = [];
   for (let a = da; a <= db; a++) ay.push(aya(ds, a));
@@ -1126,7 +1125,7 @@ async function showOpening() {
     <button class="btn gold" data-opgo>Bismillah, on commence</button></div>`;
   document.body.appendChild(ov);
   ov.querySelector('[data-opplay]').addEventListener('click', () => playSeq(ay));
-  ov.querySelector('[data-opgo]').addEventListener('click', () => { player.pause(); ov.classList.add('out'); setTimeout(() => ov.remove(), 300); });
+  ov.querySelector('[data-opgo]').addEventListener('click', () => { S.lastOpening = today(); save(); player.pause(); ov.classList.add('out'); setTimeout(() => ov.remove(), 300); });
 }
 
 /* ---------- Navigation ---------- */
