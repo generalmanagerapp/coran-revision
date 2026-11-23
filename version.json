@@ -1,7 +1,14 @@
 {
-  "version": "1.9.3",
+  "version": "1.9.4",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.4",
+      "date": "2026-11-23",
+      "notes": [
+        "Emplacements de pub prêts (inactifs tant que AdSense n'est pas configuré), page confidentialité"
+      ]
+    },
     {
       "version": "1.9.3",
       "date": "2026-11-23",

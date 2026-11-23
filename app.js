@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.3';
+const VERSION = '1.9.4';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -945,7 +945,7 @@ function renderSettings() {
   ${sec('data', 'trash', 'Données', 'Réinitialiser le suivi',
     `<button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>`)}
   </div>
-  <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br>Version ${VERSION}</div>`;
+  <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Confidentialité</a> · Version ${VERSION}</div>`;
   offlineInfo(); cloudInfo();
   $$('#settingsBox details').forEach(d => d.addEventListener('toggle', () => { d.open ? openSec.add(d.dataset.sec) : openSec.delete(d.dataset.sec); }));
 }
@@ -1223,13 +1223,26 @@ async function showOpening() {
   ov.querySelector('[data-opgo]').addEventListener('click', () => { S.lastOpening = today(); save(); player.pause(); ov.classList.add('out'); setTimeout(() => ov.remove(), 300); });
 }
 
+/* ---------- Publicité (Google AdSense, activée seulement si ads-config.js est rempli) ---------- */
+const adsOn = () => !!(window.ADS && ADS.client && ADS.slot) && navigator.onLine;
+function mountAd(id) {
+  const box = $('#' + id); if (!box || box.dataset.done || !adsOn()) return;
+  box.dataset.done = 1; box.hidden = false;
+  if (!window._adsLoaded) {
+    window._adsLoaded = 1; const sc = document.createElement('script'); sc.async = true; sc.crossOrigin = 'anonymous';
+    sc.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client); document.head.appendChild(sc);
+  }
+  box.innerHTML = `<small>Publicité</small><ins class="adsbygoogle" style="display:block" data-ad-client="${esc(ADS.client)}" data-ad-slot="${esc(ADS.slot)}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+}
+
 /* ---------- Navigation ---------- */
 function showView(v) {
   $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-' + v));
   $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
   if (v === 'surahs') renderSurahs();
-  if (v === 'stats') renderStats();
-  if (v === 'settings') renderSettings();
+  if (v === 'stats') { renderStats(); mountAd('adStats'); }
+  if (v === 'settings') { renderSettings(); mountAd('adSet'); }
   if (v === 'read') renderRead();
   if (v === 'revise') { renderModeBar(); if (!currentCard || currentCard.out || currentCard.answered || !$('#deck .card')) newCard(); }
 }
