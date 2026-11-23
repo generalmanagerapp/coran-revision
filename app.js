@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.7.3';
+const VERSION = '1.8.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -68,6 +68,11 @@ function applyTheme() {
     l.href = `https://fonts.googleapis.com/css2?family=${th.font}&display=swap`;
   } else if (l) l.remove();
 }
+Object.assign(ICONS, {
+  'wifi-off': '<path d="M12 18l.01 0" /><path d="M9.172 15.172a4 4 0 0 1 5.656 0" /><path d="M6.343 12.343a7.963 7.963 0 0 1 3.864 -2.14m4.163 .155a7.965 7.965 0 0 1 3.287 2" /><path d="M3.515 9.515a12 12 0 0 1 3.544 -2.455m3.101 -.92a12 12 0 0 1 10.325 3.374" /><path d="M3 3l18 18" />',
+  'bell': '<path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" />',
+  'text-size': '<path d="M3 7v-2h13v2" /><path d="M10 5v14" /><path d="M12 19h-4" /><path d="M15 13v-1h6v1" /><path d="M18 12v7" /><path d="M17 19h2" />',
+});
 const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e5, 90 * 864e5, 180 * 864e5];
 
 /* ---------- State ---------- */
@@ -76,7 +81,7 @@ const defaultState = () => ({
   modes: { suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
-  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true, goal: 20, opening: true },
+  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
@@ -88,6 +93,8 @@ function load() {
 }
 const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(S));
 applyTheme();
+const applyScale = () => document.documentElement.style.setProperty('--as', S.settings.arScale || 1);
+applyScale();
 
 /* ---------- Data ---------- */
 let SURAHS = [], AYAS = [], AYA_IDX = new Map(), INV = new Map(), DF = new Map();
@@ -198,9 +205,18 @@ function rememberCard(q) {
   const max = Math.max(3, Math.min(60, Math.floor(POOL.length * 0.7)));
   while (recent.length > max) recent.shift();
 }
+let weakMode = false;
+const isWeak = a => { const r = rec(a); return !!r && r.n > r.k && r.b <= 1; };
+const weakList = () => POOL.filter(isWeak).sort((x, y) => (rec(x).b - rec(y).b) || ((rec(y).n - rec(y).k) - (rec(x).n - rec(x).k)));
+function updateWeakBar() {
+  const el = $('#weakBar'); if (!el) return;
+  el.hidden = !weakMode;
+  if (weakMode) el.innerHTML = `<span>${ic('target-arrow')} Zones faibles : ${weakList().length} ayat fragiles</span><button data-weakoff>Quitter</button>`;
+}
 function pickTarget(filter, tgt = a => a) {
   let cand = POOL.filter(filter);
   if (!cand.length) return null;
+  if (weakMode) { const wk = cand.filter(isWeak); if (wk.length) cand = wk; else { weakMode = false; toast('Plus aucune zone faible, bravo !'); updateWeakBar(); } }
   const rs = new Set(recent), near = a => { const t = tgt(a); return rs.has(a.id) || rs.has(t.id) || (next(a) && rs.has(next(a).id)) || (prev(a) && rs.has(prev(a).id)); };
   const c1 = cand.filter(a => !near(a)), c2 = cand.filter(a => !rs.has(a.id) && !rs.has(tgt(a).id));
   cand = c1.length ? c1 : c2.length ? c2 : cand;
@@ -239,9 +255,13 @@ function play(a, then, fromReader) {
   if (!fromReader && typeof readStop === 'function') readStop();
   player.pause();
   let k = dirIdx[S.settings.reciter] || 0;
-  const tryK = () => { player.src = audioUrl(a, k); player.play().catch(() => {}); };
+  const tryK = () => { const u = audioUrl(a, k); player.src = u; player.play().catch(() => {}); if (S.settings.cacheListen) setTimeout(() => cacheAudio(u), 1500); };
   player.onerror = () => { const n = recDirs().length; if (k + 1 < n) { k++; dirIdx[S.settings.reciter] = k; tryK(); } else toast('Audio indisponible pour ce récitateur'); };
   player.onended = then || null; tryK();
+}
+const AUDIO_CACHE = 'murajaa-audio';
+async function cacheAudio(url) {
+  try { const c = await caches.open(AUDIO_CACHE); if (await c.match(url)) return true; const r = await fetch(url, { mode: 'cors' }); if (!r.ok) return false; await c.put(url, r); return true; } catch (e) { return false; }
 }
 function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2500); }
 function playSeq(list) { let i = 0; const go = () => { if (i < list.length) play(list[i++], go); }; go(); }
@@ -408,6 +428,7 @@ function lev(a, b) {
 const session = { n: 0, ok: 0 };
 let currentCard = null;
 function updateSession() {
+  updateWeakBar();
   $('#sessionInfo').textContent = session.n ? `${session.n} carte${session.n > 1 ? 's' : ''} · ${Math.round(100 * session.ok / session.n)} %` : '';
   const g = S.settings.goal || 20, d = S.days[today()] || 0, el = $('#goal');
   if (el) { el.querySelector('span').textContent = d >= g ? `Objectif du jour atteint : ${d}/${g}` : `Objectif du jour : ${d}/${g}`; el.querySelector('b').style.width = Math.min(100, 100 * d / g) + '%'; el.classList.toggle('done', d >= g); }
@@ -828,6 +849,10 @@ function renderStats() {
     <div class="tile"><b>${due}</b><span>ayat à revoir maintenant</span></div>
     <div class="tile"><b>${mastered}/${POOL.length}</b><span>ayat maîtrisées</span></div>
     <div class="tile"><b>${seen}</b><span>ayat déjà vues</span></div></div>`;
+  // zones faibles
+  const wl = weakList();
+  html += `<h2>Zones faibles</h2>` + (wl.length ? `<div class="weak">${wl.slice(0, 8).map(a => { const r = rec(a); return `<div class="wrow"><span>${esc(surahName(a.s))} · ${a.s}:${a.a}</span><small>${r.n - r.k} raté${r.n - r.k > 1 ? 's' : ''} / ${r.n}</small></div>`; }).join('')}</div>
+    <button class="btn gold" data-weakgo>${ic('target-arrow')} Retravailler mes ${wl.length} zone${wl.length > 1 ? 's' : ''} faible${wl.length > 1 ? 's' : ''}</button>` : `<div class="empty">Aucune zone faible pour l’instant : continue comme ça.</div>`);
   // 30 derniers jours
   html += `<h2>30 derniers jours</h2><div class="heat">`;
   const max = Math.max(1, ...Object.values(S.days));
@@ -852,6 +877,9 @@ function renderStats() {
   $('#statsBox').innerHTML = html;
 }
 
+$('#statsBox').addEventListener('click', e => { if (e.target.closest('[data-weakgo]')) { weakMode = true; showView('revise'); newCard(); } });
+$('#weakBar').addEventListener('click', e => { if (e.target.closest('[data-weakoff]')) { weakMode = false; updateWeakBar(); newCard(); } });
+
 /* ---------- Réglages ---------- */
 const openSec = new Set();
 function renderSettings() {
@@ -862,7 +890,8 @@ function renderSettings() {
   $('#settingsBox').innerHTML = `<div class="secs">
   ${sec('look', 'palette', 'Apparence', (THEMES[st.theme] || THEMES.emeraude).name,
     `<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
-     <div class="set">${chk('trad', 'Traduction française', 'Hamidullah')}</div>`)}
+     <div class="set">${chk('trad', 'Traduction française', 'Hamidullah')}
+     <label>Taille du texte arabe<select data-sel="arScale">${[[.85, 'Petit'], [1, 'Normal'], [1.2, 'Grand'], [1.4, 'Très grand']].map(([v, l]) => `<option value="${v}" ${+st.arScale === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
   ${sec('goal', 'target-arrow', 'Objectif & accueil', `${st.goal} cartes par jour`,
     `<div class="set"><label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
      ${chk('opening', 'Écran d’ouverture', 'Duaa + hadith du jour, à la 1re ouverture de la journée')}</div>`)}
@@ -875,26 +904,43 @@ function renderSettings() {
   ${sec('audio', 'volume', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
     `<div class="set"><label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
      ${chk('autoplay', 'Lecture audio automatique', 'Mode écoute + correction')}</div>`)}
+  ${sec('offline', 'wifi-off', 'Hors-ligne', 'Utiliser l’appli sans internet',
+    `<div class="set" style="padding:12px"><p class="muted" style="margin:0 0 8px">Le Coran, la traduction et l’appli fonctionnent déjà sans internet. Pour l’audio, télécharge-le une fois.</p>
+     <div id="offInfo" class="muted" style="margin:0 0 10px">Calcul…</div>
+     ${chk('cacheListen', 'Garder les ayat écoutées', 'Elles seront dispo hors-ligne ensuite')}
+     <div class="btnrow" style="margin:10px 0 0"><button class="btn gold" id="offDl">${ic('download')} Télécharger l’audio de ma sélection</button><button class="btn light" id="offClear">${ic('trash')} Vider l’audio</button></div></div>`)}
+  ${sec('remind', 'bell', 'Rappel quotidien', 'Alarme dans ton calendrier',
+    `<div class="set" style="padding:12px"><p class="muted" style="margin:0 0 10px">Ajoute un événement qui se répète chaque jour avec alarme : ton téléphone te rappellera de réviser.</p>
+     <label>Heure<input type="time" data-sel="remindAt" value="${st.remindAt || '20:00'}"></label>
+     <div class="btnrow" style="margin:10px 0 0"><button class="btn gold" id="remAdd">${ic('bell')} Ajouter à mon calendrier</button></div></div>`)}
   ${sec('save', 'device-floppy', 'Sauvegarde', 'Exporter / importer ta progression',
     `<div class="set" style="padding:12px"><p class="muted" style="margin:0 0 10px">Garde une copie de ta progression ou transfère-la sur un autre téléphone.</p>
      <div class="btnrow" style="margin:0"><button class="btn gold" data-export>${ic('download')} Exporter</button><button class="btn light" data-import>${ic('upload')} Importer</button></div>
+     <div class="btnrow" style="margin:8px 0 0"><button class="btn light" data-copycode>Copier un code</button><button class="btn light" data-pastecode>Coller un code</button></div>
+     <p class="muted" style="margin:10px 0 0">${S.lastBackup ? 'Dernière sauvegarde : ' + new Date(S.lastBackup + 'T12:00').toLocaleDateString('fr') : 'Aucune sauvegarde faite pour l’instant.'}</p>
      <input type="file" accept=".json,application/json" data-importfile hidden></div>`)}
   ${sec('data', 'trash', 'Données', 'Réinitialiser le suivi',
     `<button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>`)}
   </div>
   <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br>Version ${VERSION}</div>`;
+  offlineInfo();
   $$('#settingsBox details').forEach(d => d.addEventListener('toggle', () => { d.open ? openSec.add(d.dataset.sec) : openSec.delete(d.dataset.sec); }));
 }
 $('#settingsBox').addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.modeT) { S.modes[t.dataset.modeT] = t.checked; if (!enabledModes().length) { S.modes[t.dataset.modeT] = true; t.checked = true; } }
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
-  if (t.dataset.sel) { S.settings[t.dataset.sel] = t.dataset.sel === 'goal' ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
+  if (t.dataset.sel) { S.settings[t.dataset.sel] = (t.dataset.sel === 'goal' || t.dataset.sel === 'arScale') ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
   if (t.hasAttribute('data-importfile') && t.files[0]) return importData(t.files[0]);
-  save(); renderModeBar(); renderSettings();
+  save(); applyScale(); renderModeBar(); renderSettings();
 });
 $('#settingsBox').addEventListener('click', e => {
   if (e.target.closest('[data-export]')) return exportData();
+  if (e.target.closest('[data-copycode]')) return copyCode();
+  if (e.target.closest('[data-pastecode]')) return pasteCode();
+  if (e.target.closest('#offDl')) return downloadAudio();
+  if (e.target.closest('#offClear')) return clearAudio();
+  if (e.target.closest('#remAdd')) return addReminder();
   if (e.target.closest('[data-import]')) return $('[data-importfile]').click();
   const tp = e.target.closest('[data-theme-pick]');
   if (tp) { S.settings.theme = tp.dataset.themePick; save(); applyTheme(); renderSettings(); return; }
@@ -904,16 +950,82 @@ $('#settingsBox').addEventListener('click', e => {
 });
 
 
+/* ---------- Hors-ligne, rappel, code de sauvegarde ---------- */
+async function offlineInfo() {
+  const el = $('#offInfo'); if (!el) return;
+  let n = 0, mb = 0;
+  try { n = (await (await caches.open(AUDIO_CACHE)).keys()).length; const e = await navigator.storage.estimate(); mb = Math.round((e.usage || 0) / 1048576); } catch (e) {}
+  const ready = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+  const el2 = $('#offInfo'); if (el2) el2.innerHTML = `${ready ? 'Appli prête hors-ligne' : 'Appli pas encore prête hors-ligne (ouvre-la une fois avec internet)'}<br>Audio gardé : ${n} ayat · ${mb} Mo utilisés au total`;
+}
+let dl = null;
+async function downloadAudio() {
+  const btn = () => $('#offDl');
+  if (dl) { dl.stop = true; return; }
+  const dirs = recDirs(), items = POOL.slice(), name = (RECITERS[S.settings.reciter] || RECITERS.Alafasy_128kbps).n;
+  if (!items.length) return toast('Coche d’abord des sourates');
+  const kbps = +((/_(\d+)kbps/.exec(dirs[0]) || [])[1] || 64);
+  const mo = Math.round(items.reduce((t, a) => t + a.tk.length, 0) * 0.55 * kbps / 8 / 1024);
+  if (!confirm(`Télécharger l’audio de ${items.length} ayat (${name}, environ ${mo} Mo) ? Garde l’appli ouverte pendant le téléchargement.`)) return;
+  try { navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+  dl = { stop: false, done: 0, fail: 0, blocked: false }; let i = 0;
+  const upd = () => { const b = btn(); if (b) b.innerHTML = `${ic('player-stop')} ${dl.done}/${items.length} · Arrêter`; };
+  const worker = async () => {
+    while (!dl.stop) {
+      const a = items[i++]; if (!a) break;
+      let ok = false;
+      for (const d of dirs) { ok = await cacheAudio(`https://everyayah.com/data/${d}/${pad3(a.s)}${pad3(a.a)}.mp3`); if (ok) break; }
+      ok ? dl.done++ : dl.fail++; upd();
+      if (!dl.done && dl.fail >= 6) { dl.blocked = true; dl.stop = true; }
+    }
+  };
+  upd(); await Promise.all([worker(), worker(), worker(), worker()]);
+  const r = dl; dl = null; const b = btn(); if (b) b.innerHTML = `${ic('download')} Télécharger l’audio de ma sélection`;
+  toast(r.blocked ? 'Téléchargement impossible : le serveur audio refuse (hors-ligne audio indisponible)' : r.stop ? `Arrêté : ${r.done} ayat gardées` : `Terminé : ${r.done} ayat${r.fail ? ', ' + r.fail + ' échec(s)' : ''}`);
+  offlineInfo();
+}
+async function clearAudio() { if (!confirm('Supprimer tout l’audio téléchargé ?')) return; try { await caches.delete(AUDIO_CACHE); } catch (e) {} toast('Audio supprimé'); offlineInfo(); }
+function addReminder() {
+  const [hh, mm] = (S.settings.remindAt || '20:00').split(':'), d = new Date(), p = n => String(n).padStart(2, '0');
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone, url = location.href.split('?')[0].split('#')[0];
+  const st = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${hh}${mm}00`;
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Murajaa//FR', 'BEGIN:VEVENT', 'UID:murajaa-rappel-quotidien', `DTSTAMP:${new Date().toISOString().replace(/[-:]|\.\d+/g, '')}`,
+    `DTSTART;TZID=${tz}:${st}`, 'DURATION:PT10M', 'RRULE:FREQ=DAILY', 'SUMMARY:Muraja\'a : révision du jour', `DESCRIPTION:${url}`, `URL:${url}`, 'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Révision du jour', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar' }), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'murajaa-rappel.ics'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('Ouvre le fichier pour l’ajouter à ton calendrier');
+}
+function copyCode() {
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify({ app: 'muraja-a', data: S }))));
+  (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(() => { S.lastBackup = today(); save(); toast('Code copié : colle-le dans une note ou un message'); }, () => prompt('Copie ce code :', code));
+}
+function pasteCode() {
+  const c = prompt('Colle ton code de sauvegarde :'); if (!c) return;
+  try {
+    const j = JSON.parse(decodeURIComponent(escape(atob(c.trim())))); if (j.app !== 'muraja-a' || !j.data) throw 0;
+    if (!confirm('Remplacer ta progression actuelle par ce code ?')) return;
+    const def = defaultState(); S = { ...def, ...j.data, modes: { ...def.modes, ...j.data.modes }, settings: { ...def.settings, ...j.data.settings } };
+    save(); applyTheme(); applyScale(); buildPool(); renderSettings(); renderModeBar(); toast('Progression restaurée');
+  } catch (e) { toast('Code invalide'); }
+}
+
 /* ---------- Lecture ---------- */
 const BASMALA = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
 const arNum = n => n.toLocaleString('ar-EG');
-let readS = 1, readCur = 0, readOn = false, readRep = false, readMask = false;
+let readS = 1, readCur = 0, readOn = false, readRep = false, readMask = false, readFrom = 1, readTo = 7, readLoop = false, readTimes = 1, readEcho = false, readT = null, readSurahShown = 0;
 function renderRead() {
   readS = S.settings.readS || 1;
   const sel = $('#readSel');
   if (!sel.options.length) sel.innerHTML = SURAHS.map(x => `<option value="${x.i}">${x.i}. ${esc(x.tr)} — ${x.ar}</option>`).join('');
   sel.value = readS;
   const su = SURAHS[readS - 1];
+  if (readSurahShown !== readS) { readSurahShown = readS; readFrom = 1; readTo = su.count; readCur = 0; }
+  readTo = Math.min(readTo, su.count); readFrom = Math.min(readFrom, readTo);
+  const opt = (v) => Array.from({ length: su.count }, (_, i) => `<option value="${i + 1}" ${i + 1 === v ? 'selected' : ''}>${i + 1}</option>`).join('');
+  $('#rExtra').innerHTML = `<label>Passage <select id="rFrom">${opt(readFrom)}</select> à <select id="rTo">${opt(readTo)}</select></label>
+    <button id="rLoop" class="btn light" aria-pressed="${readLoop}">${ic('repeat')} Boucle</button>
+    <label>Chaque aya ×<select id="rTimes">${[1, 2, 3, 5, 10].map(v => `<option ${v === readTimes ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+    <button id="rEcho" class="btn light" aria-pressed="${readEcho}">${ic('ear')} Écoute-répète</button>`;
   let h = `<div class="rhead"><div class="ar">${su.ar}</div><div>${esc(su.tr)} · ${esc(su.fr)}</div><small>${su.count} ayat · ${su.type === 'm' ? 'mecquoise' : 'médinoise'}</small></div>`;
   if (readS !== 1 && readS !== 9) h += `<div class="ar basm">${BASMALA}</div>`;
   for (let a = 1; a <= su.count; a++) {
@@ -929,28 +1041,51 @@ function markRead() {
   $('#rPlay').innerHTML = readOn ? `${ic('player-pause')} Pause` : `${ic('player-play')} Écouter`;
   $('#rRep').setAttribute('aria-pressed', readRep); $('#rRep').classList.toggle('gold', readRep);
   $('#rMask').setAttribute('aria-pressed', readMask); $('#rMask').classList.toggle('gold', readMask);
+  [['rLoop', readLoop], ['rEcho', readEcho]].forEach(([id, v]) => { const b = $('#' + id); if (b) { b.setAttribute('aria-pressed', v); b.classList.toggle('gold', v); } });
+  const np = $('#nowPlay'); if (np) { np.hidden = !readOn; if (readOn) np.querySelector('span').textContent = `${SURAHS[readS - 1].tr} · aya ${readCur}${readEcho ? ' · à toi de répéter après l’écoute' : ''}`; }
 }
-function readPlay(a) {
-  const n = SURAHS[readS - 1].count;
-  if (a > n) { readOn = false; markRead(); return; }
+function readPlay(a, rep = 0) {
+  if (a > readTo) { if (readLoop) { a = readFrom; rep = 0; } else { readOn = false; markRead(); return; } }
+  if (a < readFrom) a = readFrom;
   readCur = a; readOn = true; markRead();
+  $$('#readBox .ra.echoing').forEach(x => x.classList.remove('echoing'));
   const el = $(`#readBox .ra[data-ra="${a}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  play(aya(readS, a), () => readPlay(readRep ? a : a + 1), true);
+  const step = () => { readT = null; if (!readOn) return; if (readRep) return readPlay(a, 0); if (rep + 1 < readTimes) return readPlay(a, rep + 1); readPlay(a + 1); };
+  play(aya(readS, a), () => {
+    if (!readOn) return;
+    if (!readEcho) return step();
+    if (el) el.classList.add('echoing');
+    const d = player.duration > 0 && isFinite(player.duration) ? player.duration * 1000 : 4000;
+    readT = setTimeout(() => { if (el) el.classList.remove('echoing'); step(); }, d + 900);
+  }, true);
 }
-function readStop() { if (!readOn) return; readOn = false; player.pause(); markRead(); }
+function readStop() { if (!readOn) return; readOn = false; clearTimeout(readT); player.pause(); $$('#readBox .ra.echoing').forEach(x => x.classList.remove('echoing')); markRead(); }
 $('#readSel').addEventListener('change', e => { readStop(); S.settings.readS = +e.target.value; save(); renderRead(); $('#view-read').scrollTop = 0; });
 $$('[data-rnav]').forEach(b => b.addEventListener('click', () => { const v = Math.min(114, Math.max(1, (S.settings.readS || 1) + +b.dataset.rnav)); readStop(); S.settings.readS = v; save(); renderRead(); $('#view-read').scrollTop = 0; }));
-$('#rPlay').addEventListener('click', () => { if (readOn) readStop(); else readPlay(readCur || 1); });
+$('#rPlay').addEventListener('click', () => { if (readOn) readStop(); else readPlay(readCur >= readFrom && readCur <= readTo ? readCur : readFrom); });
+$('#nowPlay').addEventListener('click', e => { const d = e.target.closest('[data-np]'); if (!d) return; clearTimeout(readT); readPlay(Math.max(readFrom, Math.min(readTo, readCur + +d.dataset.np))); });
+$('#rExtra').addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'rFrom') { readFrom = +t.value; if (readTo < readFrom) readTo = readFrom; }
+  if (t.id === 'rTo') { readTo = +t.value; if (readFrom > readTo) readFrom = readTo; }
+  if (t.id === 'rTimes') readTimes = +t.value;
+  readCur = 0; readStop(); renderRead();
+});
+$('#rExtra').addEventListener('click', e => {
+  if (e.target.closest('#rLoop')) { readLoop = !readLoop; markRead(); }
+  if (e.target.closest('#rEcho')) { readEcho = !readEcho; markRead(); }
+});
 $('#rRep').addEventListener('click', () => { readRep = !readRep; markRead(); });
 $('#rMask').addEventListener('click', () => { readMask = !readMask; $('#readBox').classList.toggle('masked', readMask); $$('#readBox .ra.shown').forEach(x => x.classList.remove('shown')); markRead(); });
 $('#readBox').addEventListener('click', e => {
   const el = e.target.closest('.ra'); if (!el) return;
   if (readMask && !el.classList.contains('shown')) { el.classList.add('shown'); return; }
-  readPlay(+el.dataset.ra);
+  clearTimeout(readT); readPlay(+el.dataset.ra);
 });
 
 /* ---------- Sauvegarde ---------- */
 function exportData() {
+  S.lastBackup = today(); save();
   const blob = new Blob([JSON.stringify({ app: 'muraja-a', v: VERSION, date: new Date().toISOString(), data: S })], { type: 'application/json' });
   const name = `murajaa-sauvegarde-${today()}.json`, file = new File([blob], name, { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: 'Sauvegarde Muraja\'a' }).catch(() => {}); return; }
@@ -1014,6 +1149,10 @@ $$('.tabs button').forEach(b => b.addEventListener('click', () => showView(b.dat
   renderModeBar();
   if (S.selected.length) newCard(); else showView('surahs');
   showOpening();
+  setTimeout(() => {
+    if (streak() > 0 && !S.days[today()] && new Date().getHours() >= 17) toast(`Ta série de ${streak()} jour${streak() > 1 ? 's' : ''} est en jeu : fais quelques cartes !`);
+    else if (S.total.n > 50 && (!S.lastBackup || (Date.now() - new Date(S.lastBackup)) > 14 * 864e5)) toast('Pense à sauvegarder ta progression (Réglages → Sauvegarde)');
+  }, 3500);
   if ('serviceWorker' in navigator) {
     const hadCtrl = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {});

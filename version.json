@@ -1,7 +1,19 @@
 {
-  "version": "1.7.3",
+  "version": "1.8.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.8.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Hors-ligne complet (audio téléchargeable)",
+        "Zones faibles",
+        "Lecteur : passage, boucle, répétition par aya, écoute-répète, barre de suivi",
+        "Taille du texte arabe",
+        "Rappel quotidien (calendrier)",
+        "Sauvegarde par code + rappels"
+      ]
+    },
     {
       "version": "1.7.3",
       "date": "2026-11-22",
