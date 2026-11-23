@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.1.3';
+const VERSION = '2.2.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -89,10 +89,12 @@ const defaultState = () => ({
   modes: { intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
-  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
+  settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
+if (!S.settings.level) S.settings.level = S.settings.pieges === false ? 'facile' : 'normal';
+const LEVEL = () => S.settings.level;
 if (!RECITERS[S.settings.reciter]) S.settings.reciter = 'Alafasy_128kbps';
 if (!S.srsV2) { for (const k in S.srs) { const r = S.srs[k]; if (r.b > 0) r.b = Math.max(1, r.b - 1); } S.srsV2 = 1; }
 if (S.ranges) { S.iv = S.iv || {}; for (const k in S.ranges) S.iv[k] = [S.ranges[k]]; delete S.ranges; }
@@ -326,9 +328,9 @@ function distractorsFor(correct, exclude = [], ok = () => true) {
   const ex = new Set([correct.id, ...exclude.map(x => x.id)]);
   const seen = new Set([correct.nw.join(' ')]);
   const uniq = a => { const k = a.nw.join(' '); if (seen.has(k) || !ok(a)) return false; seen.add(k); return true; };
-  const d = (S.settings.pieges ? similar(correct, 8, { exclude: ex }) : []).filter(uniq).slice(0, 3);
+  const d = (S.settings.pieges ? similar(correct, 8, { exclude: ex }) : []).filter(uniq).slice(0, LEVEL() === 'facile' ? 2 : LEVEL() === 'difficile' ? 4 : 3);
   const more = shuffle(POOL.length > 6 ? POOL : AYAS).filter(x => !ex.has(x.id)).slice(0, 30).filter(uniq);
-  return fill([correct, ...d], more).slice(1, 4);
+  return fill([correct, ...d], more).slice(1, LEVEL() === 'facile' ? 3 : LEVEL() === 'difficile' ? 5 : 4);
 }
 
 /* ---------- Construction des questions ---------- */
@@ -368,7 +370,7 @@ function buildQuestion(mode) {
       const near = shuffle([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5].map(d => x.a + d).filter(v => v >= 1 && v <= n && !valid.has(v)));
       const wrong = near.slice(0, 3); while (wrong.length < 3) { const v = 1 + rand(n); if (!valid.has(v) && !wrong.includes(v)) wrong.push(v); }
       const opts = shuffle([x.a, ...wrong]).map(v => ({ html: String(v), good: valid.has(v), fr: true }));
-      return { mode, target: x, prompt: 'Quel est le numéro de ce verset ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
+      return { mode, target: x, prompt: 'Quel est le numéro de ce verset ?', showHtml: arBlock(x.ar) + (LEVEL() === 'difficile' ? '' : frBlock(x)), opts, hideRef: true };
     }
     case 'trad': {
       const x = pickTarget(a => !!a.fr); if (!x) return null;
@@ -1010,8 +1012,8 @@ function renderSettings() {
      ${chk('opening', 'Écran d’ouverture', 'Duaa + hadith du jour, à la 1re ouverture de la journée')}</div>`)}
   ${sec('ex', 'cards', 'Exercices', `${nMod} sur ${total} actifs`,
     Object.entries(GROUPS).map(([g, gl]) => `<h4>${gl}</h4><div class="set">${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `<label><span class="mlab">${ic(m.icon)} ${m.label}<small>${m.d}</small></span><input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>`).join(''))}
-  ${sec('game', 'device-gamepad-2', 'Options de jeu', st.pieges ? 'Pièges activés' : 'Pièges désactivés',
-    `<div class="set">${chk('pieges', 'Pièges (versets qui se ressemblent)', 'Les mauvaises réponses sont des mutashabihat')}
+  ${sec('game', 'device-gamepad-2', 'Options de jeu', ({ facile: 'Facile', normal: 'Normal', difficile: 'Difficile' })[st.level || 'normal'],
+    `<div class="set"><div class="set"><label>Difficulté<select data-sel="level">${[['facile', 'Facile (3 choix, réponses au hasard)'], ['normal', 'Normal (4 choix, versets qui se ressemblent)'], ['difficile', 'Difficile (5 choix, sans aide de traduction)']].map(([v, l]) => `<option value="${v}" ${st.level === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
      ${chk('voice', 'Reconnaissance vocale', SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation', SR ? '' : 'disabled')}
      <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Verset suivant'], ['fin', 'Fin du verset']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
   ${sec('audio', 'volume', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
@@ -1051,7 +1053,7 @@ $('#settingsBox').addEventListener('change', e => {
   if (t.dataset.modeT) { S.modes[t.dataset.modeT] = t.checked; if (!enabledModes().length) { S.modes[t.dataset.modeT] = true; t.checked = true; } }
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
   if (t.dataset.set === 'opening' && t.checked) { S.lastOpening = null; save(); setTimeout(showOpening, 150); }
-  if (t.dataset.sel) { S.settings[t.dataset.sel] = (t.dataset.sel === 'goal' || t.dataset.sel === 'arScale') ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); }
+  if (t.dataset.sel) { S.settings[t.dataset.sel] = (t.dataset.sel === 'goal' || t.dataset.sel === 'arScale') ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); if (t.dataset.sel === 'level') S.settings.pieges = t.value !== 'facile'; }
   if (t.hasAttribute('data-importfile') && t.files[0]) return importData(t.files[0]);
   save(); applyScale(); renderModeBar(); renderSettings();
 });

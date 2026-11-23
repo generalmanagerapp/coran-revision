@@ -1,7 +1,14 @@
 {
-  "version": "2.1.3",
+  "version": "2.2.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.2.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Niveaux de difficulté : Facile (3 choix au hasard), Normal, Difficile (5 choix, sans traduction)"
+      ]
+    },
     {
       "version": "2.1.3",
       "date": "2026-11-23",
