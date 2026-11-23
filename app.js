@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.4';
+const VERSION = '1.9.5';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -257,25 +257,38 @@ function grade(a, g) { // g: 'ok' | 'mid' | 'ko'
 // pas d'audio automatique tant que tu n'as pas touché l'écran (ouverture de l'appli)
 let userActed = false;
 addEventListener('pointerdown', () => { userActed = true; }, { once: true, capture: true });
-const player = new Audio();
+let player = new Audio(), pre = new Audio(); pre.preload = 'auto';   // 2 lecteurs : l'aya suivante est déjà chargée => écoute fluide
 const dirIdx = {};
 function recDirs() { return (RECITERS[S.settings.reciter] || RECITERS.Alafasy_128kbps).d; }
 function audioUrl(a, k) { return `https://everyayah.com/data/${recDirs()[k]}/${pad3(a.s)}${pad3(a.a)}.mp3`; }
-function play(a, then, fromReader) {
+const needsBasmala = a => a.a === 1 && a.s !== 1 && a.s !== 9;   // début de sourate : on récite d'abord la basmala
+function play(a, then, fromReader, nextA, skipB) {
   if (!fromReader && typeof readStop === 'function') readStop();
-  player.pause();
+  if (!skipB && needsBasmala(a)) return play(aya(1, 1), () => play(a, then, fromReader, nextA, true), fromReader, a, true);
+  player.pause(); player.onended = null;
   let k = dirIdx[S.settings.reciter] || 0;
-  const tryK = () => { const u = audioUrl(a, k); player.src = u; player.play().catch(() => {}); if (S.settings.cacheListen) setTimeout(() => cacheAudio(u), 1500); };
-  player.onerror = () => { const n = recDirs().length; if (k + 1 < n) { k++; dirIdx[S.settings.reciter] = k; tryK(); } else toast('Audio indisponible pour ce récitateur'); };
-  player.onended = then || null; tryK();
+  const start = () => {
+    const u = audioUrl(a, k);
+    if (pre.dataset.u === u) { const t = player; player = pre; pre = t; pre.onended = pre.onerror = null; pre.pause(); pre.dataset.u = ''; }
+    else player.src = u;
+    player.onerror = () => { const n = recDirs().length; if (k + 1 < n) { k++; dirIdx[S.settings.reciter] = k; start(); } else toast('Audio indisponible pour ce récitateur'); };
+    player.onended = then || null;
+    try { player.currentTime = 0; } catch (e) {}
+    player.play().catch(() => {});
+    if (S.settings.cacheListen) setTimeout(() => cacheAudio(u), 1500);
+    if (nextA) { const nx = needsBasmala(nextA) && !skipB && nextA !== a ? aya(1, 1) : nextA, nu = audioUrl(nx, k); if (pre.dataset.u !== nu) { pre.dataset.u = nu; pre.src = nu; pre.load(); } }
+  };
+  start();
 }
+
+/* ---------- (suite audio) ---------- */
 const AUDIO_CACHE = 'murajaa-audio';
 async function cacheAudio(url) {
   try { const c = await caches.open(AUDIO_CACHE); if (await c.match(url)) return true; const r = await fetch(url, { mode: 'cors' }); if (!r.ok) return false; await c.put(url, r); return true; } catch (e) { return false; }
 }
-function stopAudio() { player.onended = null; player.pause(); }
+function stopAudio() { player.onended = null; player.pause(); pre.pause(); }
 function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2500); }
-function playSeq(list) { let i = 0; const go = () => { if (i < list.length) play(list[i++], go); }; go(); }
+function playSeq(list) { let i = 0; const go = () => { if (i < list.length) { const x = list[i++]; play(x, go, undefined, list[i]); } }; go(); }
 
 /* ---------- Helpers d'affichage ---------- */
 function arSize(text) { const l = text.length; return l > 380 ? 'xs' : l > 160 ? 'small' : ''; }
@@ -1147,13 +1160,14 @@ function readPlay(a, rep = 0) {
   $$('#readBox .ra.echoing').forEach(x => x.classList.remove('echoing'));
   const el = $(`#readBox .ra[data-ra="${a}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   const step = () => { readT = null; if (!readOn) return; if (readRep) return readPlay(a, 0); if (rep + 1 < readTimes) return readPlay(a, rep + 1); readPlay(a + 1); };
+  const nxt = (readRep || rep + 1 < readTimes) ? aya(readS, a) : (a + 1 <= readTo ? aya(readS, a + 1) : (readLoop ? aya(readS, readFrom) : null));
   play(aya(readS, a), () => {
     if (!readOn) return;
     if (!readEcho) return step();
     if (el) el.classList.add('echoing');
     const d = player.duration > 0 && isFinite(player.duration) ? player.duration * 1000 : 4000;
     readT = setTimeout(() => { if (el) el.classList.remove('echoing'); step(); }, d + 900);
-  }, true);
+  }, true, readEcho ? null : nxt);
 }
 function readStop() { if (!readOn) return; readOn = false; clearTimeout(readT); player.pause(); $$('#readBox .ra.echoing').forEach(x => x.classList.remove('echoing')); markRead(); }
 $('#readSel').addEventListener('change', e => { readStop(); S.settings.readS = +e.target.value; save(); renderRead(); $('#view-read').scrollTop = 0; });

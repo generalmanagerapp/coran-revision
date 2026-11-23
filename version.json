@@ -1,7 +1,14 @@
 {
-  "version": "1.9.4",
+  "version": "1.9.5",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.5",
+      "date": "2026-11-23",
+      "notes": [
+        "Écoute : basmala avant la 1re aya d'une sourate, enchaînement fluide (aya suivante préchargée)"
+      ]
+    },
     {
       "version": "1.9.4",
       "date": "2026-11-23",
