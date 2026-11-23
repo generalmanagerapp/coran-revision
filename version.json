@@ -1,12 +1,12 @@
 {
-  "version": "2.1.1",
+  "version": "2.1.2",
   "date": "2026-11-22",
   "changelog": [
     {
-      "version": "2.1.1",
+      "version": "2.1.2",
       "date": "2026-11-23",
       "notes": [
-        "4 nouveaux exercices : Trouve l'erreur, Vrai ou faux, Numéro du verset, Traduction → verset"
+        "5 nouveaux exercices : Trouve l'erreur, Vrai ou faux, Numéro du verset, Traduction → verset, L'intrus"
       ]
     },
     {

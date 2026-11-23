@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.1.1';
+const VERSION = '2.1.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -29,6 +29,7 @@ const MODES = {
   faux:       { label: 'Vrai ou faux',   icon: 'help-circle', g: 'quiz', d: 'Ce verset est-il récité correctement ?' },
   numero:     { label: 'Numéro du verset', icon: 'hash', g: 'quiz', d: 'Retrouve le numéro du verset' },
   trad:       { label: 'Traduction → verset', icon: 'language', g: 'quiz', d: 'Retrouve le verset à partir du français' },
+  intrus:     { label: 'L’intrus',       icon: 'list-details', g: 'quiz', d: 'Quel verset n’est pas de la sourate ?' },
   ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais le verset' },
   recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin du verset' },
   lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
@@ -86,7 +87,7 @@ const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  modes: { intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
   settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
@@ -375,6 +376,16 @@ function buildQuestion(mode) {
       const opts = shuffle([x, ...distractorsFor(x, [], o => !valid.has(tkey(o)))]);
       const labels = distinctPrefixes(opts.map(o => o.tk));
       return { mode, target: x, prompt: 'Quel verset correspond à cette traduction ?', showHtml: `<div class="fr trq">${esc(x.fr)}</div>`, opts: opts.map((o, i) => ({ html: labels[i], good: valid.has(tkey(o)) })), hideRef: true };
+    }
+    case 'intrus': {
+      const x = pickTarget(() => true); if (!x) return null;
+      const keys = new Set([tkey(x)]);
+      const same = shuffle(POOL.filter(a => a.s === x.s && a.id !== x.id && !keys.has(tkey(a)))).slice(0, 2); if (same.length < 2) return null;
+      same.forEach(a => keys.add(tkey(a)));
+      const cands = [...(S.settings.pieges ? similar(x, 10) : []), ...shuffle(POOL), ...shuffle(AYAS).slice(0, 60)].filter(a => a.s !== x.s && !keys.has(tkey(a)));
+      const intr = cands[0]; if (!intr) return null;
+      const items = shuffle([x, ...same, intr]), labels = distinctPrefixes(items.map(o => o.tk));
+      return { mode, target: x, revealAya: intr, prompt: `Quel verset n’est PAS de la sourate ${esc(surahName(x.s))} ?`, opts: items.map((o, i) => ({ html: labels[i], good: o === intr })) };
     }
     case 'suivante': case 'precedente': {
       const isNext = mode === 'suivante';
