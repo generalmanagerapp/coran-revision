@@ -374,3 +374,10 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .ltxt{position:relative;z-index:1}
 @keyframes ltfloat{0%{opacity:0;transform:translate(0,18px) rotate(var(--r,0deg)) scale(.85)}25%{opacity:.5}50%{opacity:.28;transform:translate(14px,-14px) rotate(calc(var(--r,0deg)*-1)) scale(1)}75%{opacity:.5}100%{opacity:0;transform:translate(-8px,-40px) rotate(var(--r,0deg)) scale(.9)}}
 @media (prefers-reduced-motion:reduce){.lt{animation:none;opacity:.2}}
+
+.wsel{display:flex;flex-wrap:wrap;direction:rtl;gap:8px;justify-content:center;margin:14px 0}
+.wsel .wtile{font-size:calc(24px*var(--as,1))}
+.wtile.good{background:var(--good-bg);color:var(--good-fg);border-color:var(--green)}
+.wtile.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--red)}
+.wtile.dim{opacity:.5}
+.trq{font-size:18px;line-height:1.5;padding:6px 4px 10px;text-align:center}

@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.0.3';
+const VERSION = '2.1.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -25,6 +25,14 @@ const MODES = {
   sourate:    { label: 'Quelle sourate', icon: 'map-pin', g: 'quiz', d: 'De quelle sourate vient le verset ?' },
   ordre:      { label: 'Remettre en ordre', icon: 'arrows-sort', g: 'quiz', d: 'Fais glisser 4 versets dans l’ordre' },
   motamot:    { label: 'Mot à mot',      icon: 'blocks', g: 'quiz', d: 'Reconstitue le verset en touchant les mots dans l’ordre' },
+  erreur:     { label: 'Trouve l’erreur', icon: 'zoom-exclamation', g: 'quiz', d: 'Un mot a été remplacé : touche-le' },
+  faux:       { label: 'Vrai ou faux',   icon: 'help-circle', g: 'quiz', d: 'Ce verset est-il récité correctement ?' },
+  numero:     { label: 'Numéro du verset', icon: 'hash', g: 'quiz', d: 'Retrouve le numéro du verset' },
+  trad:       { label: 'Traduction → verset', icon: 'language', g: 'quiz', d: 'Retrouve le verset à partir du français' },
+  vtrad:      { label: 'Verset → traduction', icon: 'language', g: 'quiz', d: 'Choisis la bonne traduction' },
+  intrus:     { label: 'L’intrus',       icon: 'list-details', g: 'quiz', d: 'Quel verset n’est pas de la sourate ?' },
+  motsuiv:    { label: 'Mot suivant',    icon: 'player-track-next', g: 'quiz', d: 'Quel mot vient ensuite ?' },
+  dernier:    { label: 'Dernier mot',    icon: 'target-arrow', g: 'quiz', d: 'Retrouve le dernier mot du verset' },
   ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais le verset' },
   recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin du verset' },
   lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
@@ -71,6 +79,10 @@ function applyTheme() {
 Object.assign(ICONS, {
   'wifi-off': '<path d="M12 18l.01 0" /><path d="M9.172 15.172a4 4 0 0 1 5.656 0" /><path d="M6.343 12.343a7.963 7.963 0 0 1 3.864 -2.14m4.163 .155a7.965 7.965 0 0 1 3.287 2" /><path d="M3.515 9.515a12 12 0 0 1 3.544 -2.455m3.101 -.92a12 12 0 0 1 10.325 3.374" /><path d="M3 3l18 18" />',
   'bell': '<path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" />',
+  'hash': '<path d="M5 9l14 0" /><path d="M5 15l14 0" /><path d="M11 4l-4 16" /><path d="M17 4l-4 16" />',
+  'language': '<path d="M4 5h7" /><path d="M9 3v2c0 4.418 -2.239 8 -5 8" /><path d="M5 9c-.003 2.144 2.952 3.908 6.7 4" /><path d="M12 20l4 -9l4 9" /><path d="M19.1 18h-6.2" />',
+  'zoom-exclamation': '<path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /><path d="M10 13v.01" /><path d="M10 7v3" />',
+  'help-circle': '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 17l0 .01" /><path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4" />',
   'text-size': '<path d="M3 7v-2h13v2" /><path d="M10 5v14" /><path d="M12 19h-4" /><path d="M15 13v-1h6v1" /><path d="M18 12v7" /><path d="M17 19h2" />',
 });
 const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e5, 90 * 864e5, 180 * 864e5];
@@ -78,7 +90,7 @@ const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  modes: { erreur: true, faux: true, numero: true, trad: true, vtrad: true, intrus: true, motsuiv: true, dernier: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
   settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
@@ -323,8 +335,78 @@ function distractorsFor(correct, exclude = [], ok = () => true) {
 }
 
 /* ---------- Construction des questions ---------- */
+// mot d'un verset remplacé par un autre mot plausible (autre verset proche)
+function wordChoices(x, i, n = 3) {
+  const wn = x.nw[i], pool = new Map();
+  const src = S.settings.pieges ? similar(x, 8) : shuffle(POOL).slice(0, 8);
+  for (const b of [...src, ...shuffle(POOL).slice(0, 25)]) {
+    const j = Math.min(i, b.tk.length - 1);
+    for (const k of [j, j - 1, j + 1, rand(b.tk.length)]) { const w = b.tk[k], m = b.nw[k]; if (w && m && m.length >= 3 && m !== wn && !pool.has(m)) pool.set(m, w); }
+    if (pool.size >= 12) break;
+  }
+  return shuffle([...pool.values()]).slice(0, n);
+}
+function altWord(x) {
+  const idxs = x.nw.map((w, i) => w.length >= 3 ? i : -1).filter(i => i >= 0); if (!idxs.length) return null;
+  const i = pick(idxs), w = wordChoices(x, i, 1)[0]; return w ? { i, word: w } : null;
+}
 function buildQuestion(mode) {
   switch (mode) {
+    case 'erreur': {
+      const x = pickTarget(a => a.tk.length >= 4 && a.tk.length <= 20); if (!x) return null;
+      const alt = altWord(x); if (!alt) return null;
+      const words = x.tk.slice(); words[alt.i] = alt.word;
+      return { mode, target: x, prompt: 'Un mot a été remplacé : touche-le', words, bad: alt.i };
+    }
+    case 'faux': {
+      const x = pickTarget(a => a.nw.filter(w => w.length >= 3).length >= 2); if (!x) return null;
+      let alt = Math.random() < .5 ? altWord(x) : null, shown = x.tk.join(' ');
+      if (alt) { const t = x.tk.slice(); t[alt.i] = alt.word; shown = t.join(' '); }
+      return { mode, target: x, prompt: 'Ce verset est-il récité correctement ?', showHtml: arBlock(shown),
+        opts: [{ html: 'Correct', good: !alt, fr: true }, { html: 'Un mot est faux', good: !!alt, fr: true }] };
+    }
+    case 'numero': {
+      const x = pickTarget(a => SURAHS[a.s - 1].count >= 4); if (!x) return null;
+      const n = SURAHS[x.s - 1].count, valid = new Set(sameText(x).filter(y => y.s === x.s).map(y => y.a)); valid.add(x.a);
+      const near = shuffle([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5].map(d => x.a + d).filter(v => v >= 1 && v <= n && !valid.has(v)));
+      const wrong = near.slice(0, 3); while (wrong.length < 3) { const v = 1 + rand(n); if (!valid.has(v) && !wrong.includes(v)) wrong.push(v); }
+      const opts = shuffle([x.a, ...wrong]).map(v => ({ html: String(v), good: valid.has(v), fr: true }));
+      return { mode, target: x, prompt: 'Quel est le numéro de ce verset ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
+    }
+    case 'trad': {
+      const x = pickTarget(a => !!a.fr); if (!x) return null;
+      const valid = new Set(sameText(x).map(tkey));
+      const opts = shuffle([x, ...distractorsFor(x, [], o => !valid.has(tkey(o)))]);
+      const labels = distinctPrefixes(opts.map(o => o.tk));
+      return { mode, target: x, prompt: 'Quel verset correspond à cette traduction ?', showHtml: `<div class="fr trq">${esc(x.fr)}</div>`, opts: opts.map((o, i) => ({ html: labels[i], good: valid.has(tkey(o)) })), hideRef: true };
+    }
+    case 'vtrad': {
+      const x = pickTarget(a => !!a.fr); if (!x) return null;
+      const cut = t => t.length > 150 ? t.slice(0, 147) + '…' : t;
+      const wrong = distractorsFor(x, [], o => !!o.fr && o.fr !== x.fr);
+      const opts = shuffle([{ html: esc(cut(x.fr)), good: true, fr: true }, ...wrong.map(o => ({ html: esc(cut(o.fr)), good: false, fr: true }))]);
+      return { mode, target: x, prompt: 'Quelle est la traduction de ce verset ?', showHtml: arBlock(x.ar), opts, hideRef: true };
+    }
+    case 'intrus': {
+      const x = pickTarget(() => true); if (!x) return null;
+      const keys = new Set([tkey(x)]);
+      const same = shuffle(POOL.filter(a => a.s === x.s && a.id !== x.id && !keys.has(tkey(a)))).slice(0, 2); if (same.length < 2) return null;
+      same.forEach(a => keys.add(tkey(a)));
+      const cands = [...(S.settings.pieges ? similar(x, 10) : []), ...shuffle(POOL), ...shuffle(AYAS).slice(0, 60)].filter(a => a.s !== x.s && !keys.has(tkey(a)));
+      const intr = cands[0]; if (!intr) return null;
+      const items = shuffle([x, ...same, intr]), labels = distinctPrefixes(items.map(o => o.tk));
+      return { mode, target: x, revealAya: intr, prompt: `Quel verset n’est PAS de la sourate ${esc(surahName(x.s))} ?`, opts: items.map((o, i) => ({ html: labels[i], good: o === intr })) };
+    }
+    case 'motsuiv': case 'dernier': {
+      const last = mode === 'dernier';
+      const x = pickTarget(a => a.tk.length >= 4 && a.nw.some((w, i) => i >= 2 && w.length >= 3)); if (!x) return null;
+      const idxs = x.nw.map((w, i) => (last ? i === x.nw.length - 1 : i >= 2) && w.length >= 3 ? i : -1).filter(i => i >= 0);
+      if (!idxs.length) return null;
+      const i = pick(idxs), wrong = wordChoices(x, i, 3); if (wrong.length < 3) return null;
+      const shown = x.tk.slice(0, i).join(' ') + ' <span class="blank">&nbsp;</span>';
+      return { mode, target: x, prompt: last ? 'Quel est le dernier mot du verset ?' : 'Quel est le mot suivant ?', showHtml: arBlock(shown),
+        opts: shuffle([{ html: x.tk[i], good: true }, ...wrong.map(w => ({ html: w, good: false }))]) };
+    }
     case 'suivante': case 'precedente': {
       const isNext = mode === 'suivante';
       const x = pickTarget(a => isNext ? inPool(next(a)) : inPool(prev(a)), a => isNext ? next(a) : prev(a)); if (!x) return null;
@@ -554,6 +636,7 @@ function renderCard(c) {
   if (q.show) body += arBlock(q.show.ar) + frBlock(q.show) + refLine(q.show);
   if (q.showHtml) body += q.showHtml;
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
+  if (q.words) body += `<div class="wsel">${q.words.map((w, i) => `<button class="wtile" data-ws="${i}">${w}</button>`).join('')}</div>`;
   if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip">${ic('grip-vertical')}</span><span class="ot">${it.html}</span></div>`).join('')}</div>
     <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>${ic('check')} Valider l’ordre</button></div>`;
   if (q.tiles) body += `${frBlock(q.target)}<div class="ref">${esc(surahName(q.target.s))} · ${q.target.s}:${q.target.a}</div>
@@ -591,7 +674,7 @@ function renderEff(c) {
 function setHint(c) {
   const h = $('#deckHint');
   if (chall) return tickChallenge();
-  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Fais glisser les versets dans le bon ordre, puis valide' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Fais glisser les versets dans le bon ordre, puis valide' : c.q.words ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -611,7 +694,7 @@ function finish(c, g, html) {
 function revealBlock(t, q) {
   let s = `<div class="reveal">`;
   if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}" aria-label="Écouter">${ic('volume')}</button></div>`;
-  else s += arBlock(t.ar, 'small') + frBlock(t) + refLine(t);
+  else { const t2 = (q && q.revealAya) || t; s += (q && q.revealAya ? '<div class="muted" style="text-align:center">L’intrus était :</div>' : '') + arBlock(t2.ar, 'small') + frBlock(t2) + refLine(t2); }
   return s + `</div>`;
 }
 
@@ -632,6 +715,12 @@ document.addEventListener('click', e => {
     $$('.opt', c.el).forEach((x, i) => { x.classList.add(q.opts[i].good ? 'good' : 'dim'); });
     if (!o.good) { b.classList.remove('dim'); b.classList.add('bad'); }
     return finish(c, o.good ? 'ok' : 'ko');
+  }
+  if (b.dataset.ws !== undefined && !c.answered) {
+    const i = +b.dataset.ws, ok = i === q.bad;
+    $$('[data-ws]', c.el).forEach((x, k) => x.classList.add(k === q.bad ? 'good' : 'dim'));
+    if (!ok) { b.classList.remove('dim'); b.classList.add('bad'); }
+    return finish(c, ok ? 'ok' : 'ko');
   }
   if (b.dataset.item !== undefined && !c.answered) {
     const it = q.items[+b.dataset.item];
