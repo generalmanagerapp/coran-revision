@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.8';
+const VERSION = '1.9.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -91,7 +91,7 @@ function load() {
   try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d) { const def = defaultState(); return { ...def, ...d, modes: { ...def.modes, ...d.modes }, settings: { ...def.settings, ...d.settings } }; } } catch (e) {}
   return defaultState();
 }
-const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(S));
+const save = () => { localStorage.setItem(STORE_KEY, JSON.stringify(S)); if (typeof schedCloud === 'function') schedCloud(); };
 applyTheme();
 const applyScale = () => document.documentElement.style.setProperty('--as', S.settings.arScale || 1);
 applyScale();
@@ -928,16 +928,23 @@ function renderSettings() {
      <div class="btnrow" style="margin:0"><button class="btn gold" data-export>${ic('download')} Exporter</button><button class="btn light" data-import>${ic('upload')} Importer</button></div>
      <div class="btnrow" style="margin:8px 0 0"><button class="btn light" data-copycode>Copier un code</button><button class="btn light" data-pastecode>Coller un code</button></div>
      <p class="muted" style="margin:10px 0 0">${S.lastBackup ? 'Dernière sauvegarde : ' + new Date(S.lastBackup + 'T12:00').toLocaleDateString('fr') : 'Aucune sauvegarde faite pour l’instant.'}</p>
-     <input type="file" accept=".json,application/json" data-importfile hidden></div>`)}
+     <input type="file" accept=".json,application/json" data-importfile hidden></div>
+     <div class="set" style="padding:12px;margin-top:10px"><b>Sauvegarde automatique (ton compte GitHub)</b>
+     ${cloudGet() ? `<p class="muted" id="cloudInfo" style="margin:8px 0">…</p>
+       <div class="btnrow" style="margin:0"><button class="btn gold" id="cloudNow">Sauvegarder maintenant</button><button class="btn light" id="cloudRestore">Restaurer</button><button class="btn light" id="cloudOff">Désactiver</button></div>`
+     : `<p class="muted" style="margin:8px 0">Ta progression est envoyée toute seule (en privé) sur ton compte GitHub, et tu peux la retrouver sur un autre téléphone. Une seule fois : <a href="https://github.com/settings/tokens/new?scopes=gist&description=Muraja%27a" target="_blank" rel="noopener" style="color:var(--gold)">crée un jeton ici</a> (droit « gist » déjà coché, durée « No expiration »), copie-le et colle-le ci-dessous.</p>
+       <input id="cloudTok" type="password" autocomplete="off" placeholder="Jeton GitHub (ghp_…)" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--line3);background:var(--bg2);color:var(--text);margin-bottom:8px">
+       <div class="btnrow" style="margin:0"><button class="btn gold" id="cloudOn">Activer</button></div>`}</div>`)}
   ${sec('data', 'trash', 'Données', 'Réinitialiser le suivi',
     `<button class="danger" data-reset>Réinitialiser le suivi (garder les sourates)</button>`)}
   </div>
   <div class="foot">Texte arabe uthmani (Hafs, Complexe du Roi Fahd) · traduction Muhammad Hamidullah (comme quran.com/fr) · audio everyayah.com<br>Version ${VERSION}</div>`;
-  offlineInfo();
+  offlineInfo(); cloudInfo();
   $$('#settingsBox details').forEach(d => d.addEventListener('toggle', () => { d.open ? openSec.add(d.dataset.sec) : openSec.delete(d.dataset.sec); }));
 }
 $('#settingsBox').addEventListener('change', e => {
   const t = e.target;
+  if (t.id === 'cloudTok') return;
   if (t.dataset.modeT) { S.modes[t.dataset.modeT] = t.checked; if (!enabledModes().length) { S.modes[t.dataset.modeT] = true; t.checked = true; } }
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
   if (t.dataset.set === 'opening' && t.checked) { S.lastOpening = null; save(); setTimeout(showOpening, 150); }
@@ -949,6 +956,10 @@ $('#settingsBox').addEventListener('click', e => {
   if (e.target.closest('[data-export]')) return exportData();
   if (e.target.closest('[data-copycode]')) return copyCode();
   if (e.target.closest('[data-pastecode]')) return pasteCode();
+  if (e.target.closest('#cloudOn')) return cloudEnable();
+  if (e.target.closest('#cloudNow')) return cloudPush(true);
+  if (e.target.closest('#cloudRestore')) return cloudRestore(false);
+  if (e.target.closest('#cloudOff')) { if (confirm('Arrêter la sauvegarde automatique ? (la copie reste sur GitHub)')) { cloudSet(null); renderSettings(); } return; }
   if (e.target.closest('#offDl')) return downloadAudio();
   if (e.target.closest('#offClear')) return clearAudio();
   if (e.target.closest('#remAdd')) return addReminder();
@@ -1019,6 +1030,73 @@ function pasteCode() {
     save(); applyTheme(); applyScale(); buildPool(); renderSettings(); renderModeBar(); toast('Progression restaurée');
   } catch (e) { toast('Code invalide'); }
 }
+
+/* ---------- Sauvegarde automatique (GitHub Gist privé) ---------- */
+const CLOUD_KEY = 'murajaa_cloud', GH = 'https://api.github.com';
+const cloudGet = () => { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)); } catch (e) { return null; } };
+const cloudSet = c => c ? localStorage.setItem(CLOUD_KEY, JSON.stringify(c)) : localStorage.removeItem(CLOUD_KEY);
+const ghFetch = (path, opt, tok) => fetch(GH + path, { ...(opt || {}), headers: { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' } });
+const payload = () => JSON.stringify({ app: 'muraja-a', v: VERSION, date: new Date().toISOString(), data: S });
+function applyData(d) {
+  const def = defaultState(); S = { ...def, ...d, modes: { ...def.modes, ...d.modes }, settings: { ...def.settings, ...d.settings } };
+  save(); applyTheme(); applyScale(); buildPool(); renderModeBar(); if (currentCard) newCard();
+}
+function schedCloud() { if (!cloudGet()) return; window._cDirty = true; clearTimeout(window._cT); window._cT = setTimeout(() => cloudPush(), 20000); }
+function cloudInfo() {
+  const el = $('#cloudInfo'), c = cloudGet(); if (!el || !c) return;
+  el.textContent = c.err ? `Dernier essai en échec (${c.err}). Il réessaiera tout seul.` : c.last ? `Activée · dernier envoi : ${new Date(c.last).toLocaleString('fr', { dateStyle: 'short', timeStyle: 'short' })}` : 'Activée';
+}
+async function cloudPush(manual) {
+  const c = cloudGet(); if (!c) return false;
+  if (!navigator.onLine) { if (manual) toast('Pas de connexion'); return false; }
+  try {
+    const body = payload(), date = JSON.parse(body).date;
+    const r = await ghFetch('/gists/' + c.id, { method: 'PATCH', body: JSON.stringify({ files: { 'murajaa.json': { content: body } } }) }, c.token);
+    if (!r.ok) throw r.status;
+    const c2 = cloudGet(); if (c2) { c2.last = date; delete c2.err; cloudSet(c2); }
+    window._cDirty = false; if (manual) toast('Sauvegarde envoyée'); cloudInfo(); return true;
+  } catch (e) { const c2 = cloudGet(); if (c2) { c2.err = String(e); cloudSet(c2); } if (manual) toast('Échec de la sauvegarde (' + e + ')'); cloudInfo(); return false; }
+}
+async function cloudFetch(c) {
+  const r = await ghFetch('/gists/' + c.id, {}, c.token); if (!r.ok) throw r.status;
+  const f = (await r.json()).files['murajaa.json']; if (!f) throw 'fichier absent';
+  const j = JSON.parse(f.truncated ? await (await fetch(f.raw_url)).text() : f.content);
+  if (j.app !== 'muraja-a' || !j.data) throw 'fichier invalide'; return j;
+}
+async function cloudRestore(skipConfirm) {
+  const c = cloudGet(); if (!c) return;
+  try {
+    const j = await cloudFetch(c);
+    if (!skipConfirm && !confirm('Remplacer ta progression par la sauvegarde du ' + new Date(j.date).toLocaleString('fr') + ' ?')) return;
+    applyData(j.data); const c2 = cloudGet(); c2.last = j.date; delete c2.err; cloudSet(c2); toast('Progression restaurée'); renderSettings();
+  } catch (e) { toast('Échec de la restauration (' + e + ')'); }
+}
+async function cloudEnable() {
+  const tok = ($('#cloudTok').value || '').trim(); if (!tok) return toast('Colle d’abord ton jeton GitHub');
+  try {
+    const u = await ghFetch('/user', {}, tok); if (!u.ok) throw 'jeton refusé';
+    const l = await (await ghFetch('/gists?per_page=100', {}, tok)).json();
+    const ex = Array.isArray(l) && l.find(g => g.files && g.files['murajaa.json']);
+    if (ex) {
+      cloudSet({ token: tok, id: ex.id });
+      if (confirm('Une sauvegarde existe déjà sur ton compte.\nOK = la restaurer sur ce téléphone\nAnnuler = la remplacer par ce téléphone')) return cloudRestore(true);
+      await cloudPush(true); return renderSettings();
+    }
+    const r = await ghFetch('/gists', { method: 'POST', body: JSON.stringify({ description: 'Muraja\'a : sauvegarde automatique', public: false, files: { 'murajaa.json': { content: payload() } } }) }, tok);
+    if (!r.ok) throw 'création impossible (le jeton doit avoir le droit « gist »)';
+    cloudSet({ token: tok, id: (await r.json()).id, last: new Date().toISOString() }); toast('Sauvegarde automatique activée'); renderSettings();
+  } catch (e) { toast('Échec : ' + e); }
+}
+async function cloudCheck() {
+  const c = cloudGet(); if (!c || !navigator.onLine) return;
+  try {
+    const j = await cloudFetch(c);
+    if (c.last && j.date > c.last && confirm('Une sauvegarde plus récente existe sur ton compte (autre appareil ?). La restaurer ici ?')) { applyData(j.data); const c2 = cloudGet(); c2.last = j.date; cloudSet(c2); toast('Progression restaurée'); }
+    else if (!c.last || j.date <= c.last) schedCloud();
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && window._cDirty) cloudPush(); });
+addEventListener('online', () => { if (window._cDirty) cloudPush(); });
 
 /* ---------- Lecture ---------- */
 const BASMALA = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
@@ -1108,8 +1186,7 @@ function importData(f) {
     try {
       const j = JSON.parse(r.result); if (j.app !== 'muraja-a' || !j.data) throw 0;
       if (!confirm('Remplacer ta progression actuelle par cette sauvegarde ?')) return;
-      const def = defaultState(); S = { ...def, ...j.data, modes: { ...def.modes, ...j.data.modes }, settings: { ...def.settings, ...j.data.settings } };
-      save(); applyTheme(); buildPool(); renderSettings(); renderModeBar(); toast('Sauvegarde importée');
+      applyData(j.data); renderSettings(); toast('Sauvegarde importée');
     } catch (e) { toast('Fichier de sauvegarde invalide'); }
   };
   r.readAsText(f);
@@ -1168,6 +1245,7 @@ if (window.visualViewport) visualViewport.addEventListener('resize', fixScroll);
     if (streak() > 0 && !S.days[today()] && new Date().getHours() >= 17) toast(`Ta série de ${streak()} jour${streak() > 1 ? 's' : ''} est en jeu : fais quelques cartes !`);
     else if (S.total.n > 50 && (!S.lastBackup || (Date.now() - new Date(S.lastBackup)) > 14 * 864e5)) toast('Pense à sauvegarder ta progression (Réglages → Sauvegarde)');
   }, 3500);
+  setTimeout(cloudCheck, 5000);
   if ('serviceWorker' in navigator) {
     const hadCtrl = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {});

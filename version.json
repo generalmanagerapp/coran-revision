@@ -1,7 +1,14 @@
 {
-  "version": "1.8.8",
+  "version": "1.9.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Sauvegarde automatique privée sur ton compte GitHub (Gist), restauration sur un autre appareil"
+      ]
+    },
     {
       "version": "1.8.8",
       "date": "2026-11-23",
