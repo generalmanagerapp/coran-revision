@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.4';
+const VERSION = '1.8.5';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -352,8 +352,12 @@ function buildQuestion(mode) {
       const validS = new Set(sameText(x).map(y => y.s));
       const set = new Set([x.s]);
       const addS = v => { if (set.size < 4 && !validS.has(v)) set.add(v); };
-      if (S.settings.pieges) for (const b of similar(x, 10)) addS(b.s);
+      // mauvaises réponses : d'abord tes sourates, puis les pièges, puis des sourates de même taille/type (pas au hasard)
       for (const v of shuffle([...new Set(POOL.map(a => a.s))])) addS(v);
+      if (S.settings.pieges) for (const b of similar(x, 10)) addS(b.s);
+      const me = SURAHS[x.s - 1];
+      const close = SURAHS.filter(u => u.i !== x.s).sort((p, q) => (Math.abs(p.count - me.count) + (p.type === me.type ? 0 : 20) + Math.random() * 4) - (Math.abs(q.count - me.count) + (q.type === me.type ? 0 : 20) + Math.random() * 4));
+      for (const u of close.slice(0, 12)) addS(u.i);
       while (set.size < 4) addS(1 + rand(114));
       const opts = shuffle([...set]).map(s => ({ html: `${s}. ${esc(SURAHS[s - 1].tr)} <span style="font-family:var(--ar);float:right">${SURAHS[s - 1].ar}</span>`, good: s === x.s, fr: true }));
       return { mode, target: x, prompt: 'De quelle sourate vient cette aya ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
