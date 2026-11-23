@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.1.0';
+const VERSION = '2.1.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -29,10 +29,6 @@ const MODES = {
   faux:       { label: 'Vrai ou faux',   icon: 'help-circle', g: 'quiz', d: 'Ce verset est-il récité correctement ?' },
   numero:     { label: 'Numéro du verset', icon: 'hash', g: 'quiz', d: 'Retrouve le numéro du verset' },
   trad:       { label: 'Traduction → verset', icon: 'language', g: 'quiz', d: 'Retrouve le verset à partir du français' },
-  vtrad:      { label: 'Verset → traduction', icon: 'language', g: 'quiz', d: 'Choisis la bonne traduction' },
-  intrus:     { label: 'L’intrus',       icon: 'list-details', g: 'quiz', d: 'Quel verset n’est pas de la sourate ?' },
-  motsuiv:    { label: 'Mot suivant',    icon: 'player-track-next', g: 'quiz', d: 'Quel mot vient ensuite ?' },
-  dernier:    { label: 'Dernier mot',    icon: 'target-arrow', g: 'quiz', d: 'Retrouve le dernier mot du verset' },
   ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais le verset' },
   recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin du verset' },
   lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
@@ -90,7 +86,7 @@ const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { erreur: true, faux: true, numero: true, trad: true, vtrad: true, intrus: true, motsuiv: true, dernier: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  modes: { erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
   settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
@@ -379,33 +375,6 @@ function buildQuestion(mode) {
       const opts = shuffle([x, ...distractorsFor(x, [], o => !valid.has(tkey(o)))]);
       const labels = distinctPrefixes(opts.map(o => o.tk));
       return { mode, target: x, prompt: 'Quel verset correspond à cette traduction ?', showHtml: `<div class="fr trq">${esc(x.fr)}</div>`, opts: opts.map((o, i) => ({ html: labels[i], good: valid.has(tkey(o)) })), hideRef: true };
-    }
-    case 'vtrad': {
-      const x = pickTarget(a => !!a.fr); if (!x) return null;
-      const cut = t => t.length > 150 ? t.slice(0, 147) + '…' : t;
-      const wrong = distractorsFor(x, [], o => !!o.fr && o.fr !== x.fr);
-      const opts = shuffle([{ html: esc(cut(x.fr)), good: true, fr: true }, ...wrong.map(o => ({ html: esc(cut(o.fr)), good: false, fr: true }))]);
-      return { mode, target: x, prompt: 'Quelle est la traduction de ce verset ?', showHtml: arBlock(x.ar), opts, hideRef: true };
-    }
-    case 'intrus': {
-      const x = pickTarget(() => true); if (!x) return null;
-      const keys = new Set([tkey(x)]);
-      const same = shuffle(POOL.filter(a => a.s === x.s && a.id !== x.id && !keys.has(tkey(a)))).slice(0, 2); if (same.length < 2) return null;
-      same.forEach(a => keys.add(tkey(a)));
-      const cands = [...(S.settings.pieges ? similar(x, 10) : []), ...shuffle(POOL), ...shuffle(AYAS).slice(0, 60)].filter(a => a.s !== x.s && !keys.has(tkey(a)));
-      const intr = cands[0]; if (!intr) return null;
-      const items = shuffle([x, ...same, intr]), labels = distinctPrefixes(items.map(o => o.tk));
-      return { mode, target: x, revealAya: intr, prompt: `Quel verset n’est PAS de la sourate ${esc(surahName(x.s))} ?`, opts: items.map((o, i) => ({ html: labels[i], good: o === intr })) };
-    }
-    case 'motsuiv': case 'dernier': {
-      const last = mode === 'dernier';
-      const x = pickTarget(a => a.tk.length >= 4 && a.nw.some((w, i) => i >= 2 && w.length >= 3)); if (!x) return null;
-      const idxs = x.nw.map((w, i) => (last ? i === x.nw.length - 1 : i >= 2) && w.length >= 3 ? i : -1).filter(i => i >= 0);
-      if (!idxs.length) return null;
-      const i = pick(idxs), wrong = wordChoices(x, i, 3); if (wrong.length < 3) return null;
-      const shown = x.tk.slice(0, i).join(' ') + ' <span class="blank">&nbsp;</span>';
-      return { mode, target: x, prompt: last ? 'Quel est le dernier mot du verset ?' : 'Quel est le mot suivant ?', showHtml: arBlock(shown),
-        opts: shuffle([{ html: x.tk[i], good: true }, ...wrong.map(w => ({ html: w, good: false }))]) };
     }
     case 'suivante': case 'precedente': {
       const isNext = mode === 'suivante';
