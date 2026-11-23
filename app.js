@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.6';
+const VERSION = '1.8.7';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -81,7 +81,7 @@ const defaultState = () => ({
   modes: { suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
-  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', autoplay: true, voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
+  settings: { theme: 'emeraude', trad: true, pieges: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
@@ -537,7 +537,7 @@ function renderCard(c) {
     <div class="body">${body}</div>`;
   if (q.mode === 'sourate') $('.head span:last-child', el).textContent = 'Sourate ?';
   setHint(c);
-  if (userActed && ((q.audio && S.settings.autoplay) || q.forcePlay)) play(q.target);
+  if (userActed && (q.audio || q.forcePlay)) play(q.target);
   if (q.efface) { c.level = 0; renderEff(c); }
 }
 /* Effacement progressif : 0 texte complet → 1 un tiers caché → 2 deux tiers → 3 premières lettres → 4 rien */
@@ -573,7 +573,6 @@ function finish(c, g, html) {
   grade(t, g);
   setHint(c);
   if (chall) { chall.n++; if (g === 'ok') chall.ok++; tickChallenge(); setTimeout(() => { if (chall && currentCard === c) swipeOut(c, g === 'ok' ? 1 : -1); }, g === 'ok' ? 450 : 1100); return; }
-  if (S.settings.autoplay && !c.q.audio && (g !== 'ok' || c.q.seq)) { if (c.q.seq) playSeq(c.q.seq); else play(t); }
 }
 function revealBlock(t, q) {
   let s = `<div class="reveal">`;
@@ -719,7 +718,7 @@ function revealRecite(c) {
   c.answered = true; c.selfEval = true;
   $('[data-after]', c.el).innerHTML = revealBlock(c.q.target) + selfButtons();
   setHint(c);
-  if (userActed && S.settings.autoplay) play(c.q.target);
+  if (userActed) play(c.q.target);
 }
 const selfButtons = () => `<div class="btnrow"><button class="btn ko" data-self="ko">${ic('x')} Raté</button><button class="btn mid" data-self="mid">${ic('alert-circle')} Hésité</button><button class="btn ok" data-self="ok">${ic('check')} Su</button></div>`;
 function finishSelf(c, g) { if (c.graded) return; c.graded = true; grade(c.q.target, g); }
@@ -913,7 +912,7 @@ function renderSettings() {
      <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Aya suivante'], ['fin', 'Fin de l’aya']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
   ${sec('audio', 'volume', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
     `<div class="set"><label>Récitateur<select data-sel="reciter">${Object.entries(RECITERS).map(([v, r]) => `<option value="${v}" ${st.reciter === v ? 'selected' : ''}>${r.n}</option>`).join('')}</select></label>
-     ${chk('autoplay', 'Lecture audio automatique', 'Mode écoute + correction')}</div>`)}
+     </div>`)}
   ${sec('offline', 'wifi-off', 'Hors-ligne', 'Utiliser l’appli sans internet',
     `<div class="set" style="padding:12px"><p class="muted" style="margin:0 0 8px">Le Coran, la traduction et l’appli fonctionnent déjà sans internet. Pour l’audio, télécharge-le une fois.</p>
      <div id="offInfo" class="muted" style="margin:0 0 10px">Calcul…</div>
