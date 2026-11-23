@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Test calligraphies</title>
+<style>
+@font-face{font-family:F1;src:url(fonts/amiri-quran-arabic-400-normal.woff2)}
+@font-face{font-family:F2;src:url(fonts/test/uthmanic-hafs.woff2)}
+@font-face{font-family:F3;src:url(fonts/test/scheherazade-new-arabic-400-normal.woff2)}
+@font-face{font-family:F4;src:url(fonts/test/noto-naskh-arabic-arabic-400-normal.woff2)}
+@font-face{font-family:F5;src:url(fonts/test/amiri-arabic-400-normal.woff2)}
+@font-face{font-family:F6;src:url(fonts/test/lateef-arabic-400-normal.woff2)}
+body{background:#0f2a22;color:#eee;font:15px system-ui;margin:0;padding:14px}
+h1{font-size:18px;color:#f4e3a1}
+.c{background:#faf6ec;color:#14211b;border-radius:16px;padding:12px 14px;margin:0 0 14px}
+.n{font:700 13px system-ui;color:#8a6d2b;margin-bottom:4px}
+.a{direction:rtl;text-align:center;font-size:30px;line-height:2.1}
+.w{direction:rtl;text-align:center;font-size:34px;line-height:2}
+</style></head><body>
+<h1>Quelle calligraphie ? Regarde surtout la lettre م</h1>
+<script>
+const fonts=[['1','Actuelle : Amiri Quran'],['2','Mushaf de Médine (KFGQPC Uthmanic Hafs)'],['3','Scheherazade New'],['4','Noto Naskh'],['5','Amiri'],['6','Lateef']];
+document.body.insertAdjacentHTML('beforeend',fonts.map(([k,n])=>`<div class="c"><div class="n">${k}. ${n}</div>
+<div class="w" style="font-family:F${k}">وَنَمَارِقُ &nbsp; ثُمُودَ &nbsp; مَصْفُوفَةٌ</div>
+<div class="a" style="font-family:F${k}">وَنَمَارِقُ مَصْفُوفَةٌ ۝ وَزَرَابِيُّ مَبْثُوثَةٌ</div></div>`).join(''));
+</script></body></html>
