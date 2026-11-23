@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.8';
+const VERSION = '1.9.9';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -1273,7 +1273,21 @@ const fixScroll = () => { scrollTo(0, 0); document.documentElement.scrollTop = 0
 ['load', 'pageshow', 'resize', 'orientationchange'].forEach(ev => addEventListener(ev, fixScroll));
 if (window.visualViewport) visualViewport.addEventListener('resize', fixScroll);
 
+// version déjà à jour ? sinon on recharge UNE fois, avant d'afficher le moindre exercice
+async function staleVersion() {
+  try {
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 2000);
+    const j = await (await fetch('version.json?t=' + Date.now(), { cache: 'no-store', signal: ctl.signal })).json();
+    if (j.version && j.version !== VERSION && sessionStorage.getItem('muraja_upd') !== j.version) {
+      sessionStorage.setItem('muraja_upd', j.version);
+      try { const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {}
+      location.reload(); return true;
+    }
+  } catch (e) {}
+  return false;
+}
 (async () => {
+  if (await staleVersion()) return;
   try { await loadData(); } catch (e) { $('#loading').textContent = 'Erreur de chargement des données.'; return; }
   buildPool();
   $('#loading').remove();
@@ -1288,6 +1302,5 @@ if (window.visualViewport) visualViewport.addEventListener('resize', fixScroll);
   if ('serviceWorker' in navigator) {
     const hadCtrl = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {});
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtrl && !window._reloaded) { window._reloaded = 1; location.reload(); } });
   }
 })();

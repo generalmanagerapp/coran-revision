@@ -1,7 +1,14 @@
 {
-  "version": "1.9.8",
+  "version": "1.9.9",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.9",
+      "date": "2026-11-23",
+      "notes": [
+        "Démarrage : plus de double chargement (la mise à jour se fait avant le premier exercice)"
+      ]
+    },
     {
       "version": "1.9.8",
       "date": "2026-11-23",
