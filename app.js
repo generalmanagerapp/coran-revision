@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.5';
+const VERSION = '1.9.6';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -265,16 +265,20 @@ const needsBasmala = a => a.a === 1 && a.s !== 1 && a.s !== 9;   // début de so
 function play(a, then, fromReader, nextA, skipB) {
   if (!fromReader && typeof readStop === 'function') readStop();
   if (!skipB && needsBasmala(a)) return play(aya(1, 1), () => play(a, then, fromReader, nextA, true), fromReader, a, true);
-  player.pause(); player.onended = null;
+  clearInterval(window._pt); player.pause(); player.onended = null;
   let k = dirIdx[S.settings.reciter] || 0;
   const start = () => {
     const u = audioUrl(a, k);
     if (pre.dataset.u === u) { const t = player; player = pre; pre = t; pre.onended = pre.onerror = null; pre.pause(); pre.dataset.u = ''; }
     else player.src = u;
     player.onerror = () => { const n = recDirs().length; if (k + 1 < n) { k++; dirIdx[S.settings.reciter] = k; start(); } else toast('Audio indisponible pour ce récitateur'); };
-    player.onended = then || null;
+    // on enchaîne un peu AVANT la fin du fichier (le silence final est coupé) => pas de trou entre les ayat
+    let fired = false; const fire = () => { if (fired) return; fired = true; clearInterval(window._pt); if (then) then(); };
+    clearInterval(window._pt);
+    player.onended = fire;
     try { player.currentTime = 0; } catch (e) {}
     player.play().catch(() => {});
+    if (then) window._pt = setInterval(() => { if (!player.paused && player.duration > 0 && player.duration - player.currentTime <= 0.15) fire(); }, 25);
     if (S.settings.cacheListen) setTimeout(() => cacheAudio(u), 1500);
     if (nextA) { const nx = needsBasmala(nextA) && !skipB && nextA !== a ? aya(1, 1) : nextA, nu = audioUrl(nx, k); if (pre.dataset.u !== nu) { pre.dataset.u = nu; pre.src = nu; pre.load(); } }
   };
@@ -286,7 +290,7 @@ const AUDIO_CACHE = 'murajaa-audio';
 async function cacheAudio(url) {
   try { const c = await caches.open(AUDIO_CACHE); if (await c.match(url)) return true; const r = await fetch(url, { mode: 'cors' }); if (!r.ok) return false; await c.put(url, r); return true; } catch (e) { return false; }
 }
-function stopAudio() { player.onended = null; player.pause(); pre.pause(); }
+function stopAudio() { clearInterval(window._pt); player.onended = null; player.pause(); pre.pause(); }
 function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2500); }
 function playSeq(list) { let i = 0; const go = () => { if (i < list.length) { const x = list[i++]; play(x, go, undefined, list[i]); } }; go(); }
 

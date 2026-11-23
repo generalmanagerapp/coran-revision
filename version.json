@@ -1,7 +1,14 @@
 {
-  "version": "1.9.5",
+  "version": "1.9.6",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.6",
+      "date": "2026-11-23",
+      "notes": [
+        "Écoute : enchaînement juste avant la fin de chaque aya (moins de décalage)"
+      ]
+    },
     {
       "version": "1.9.5",
       "date": "2026-11-23",
