@@ -1,7 +1,14 @@
 {
-  "version": "1.9.2",
+  "version": "1.9.3",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.3",
+      "date": "2026-11-23",
+      "notes": [
+        "Aperçu du lien partagé : logo, nom Muraja'a et description"
+      ]
+    },
     {
       "version": "1.9.2",
       "date": "2026-11-23",
