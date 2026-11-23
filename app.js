@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.3';
+const VERSION = '1.8.4';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -1145,6 +1145,11 @@ function showView(v) {
 $$('.tabs button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
 
 /* ---------- Démarrage ---------- */
+// barre du bas toujours visible : on recale la page (après rechargement / rotation / barre d'adresse)
+const fixScroll = () => { scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; };
+['load', 'pageshow', 'resize', 'orientationchange'].forEach(ev => addEventListener(ev, fixScroll));
+if (window.visualViewport) visualViewport.addEventListener('resize', fixScroll);
+
 (async () => {
   try { await loadData(); } catch (e) { $('#loading').textContent = 'Erreur de chargement des données.'; return; }
   buildPool();

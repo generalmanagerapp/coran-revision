@@ -1,7 +1,14 @@
 {
-  "version": "1.8.3",
+  "version": "1.8.4",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.8.4",
+      "date": "2026-11-23",
+      "notes": [
+        "Barre du bas toujours visible (mise en page fixée à l'écran)"
+      ]
+    },
     {
       "version": "1.8.3",
       "date": "2026-11-23",
