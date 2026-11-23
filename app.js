@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.9.6';
+const VERSION = '1.9.7';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -269,7 +269,7 @@ function play(a, then, fromReader, nextA, skipB) {
   let k = dirIdx[S.settings.reciter] || 0;
   const start = () => {
     const u = audioUrl(a, k);
-    if (pre.dataset.u === u) { const t = player; player = pre; pre = t; pre.onended = pre.onerror = null; pre.pause(); pre.dataset.u = ''; }
+    if (pre.dataset.u === u && pre.readyState >= 3) { const t = player; player = pre; pre = t; pre.onended = pre.onerror = null; pre.pause(); pre.dataset.u = ''; }
     else player.src = u;
     player.onerror = () => { const n = recDirs().length; if (k + 1 < n) { k++; dirIdx[S.settings.reciter] = k; start(); } else toast('Audio indisponible pour ce récitateur'); };
     // on enchaîne un peu AVANT la fin du fichier (le silence final est coupé) => pas de trou entre les ayat
@@ -280,7 +280,8 @@ function play(a, then, fromReader, nextA, skipB) {
     player.play().catch(() => {});
     if (then) window._pt = setInterval(() => { if (!player.paused && player.duration > 0 && player.duration - player.currentTime <= 0.15) fire(); }, 25);
     if (S.settings.cacheListen) setTimeout(() => cacheAudio(u), 1500);
-    if (nextA) { const nx = needsBasmala(nextA) && !skipB && nextA !== a ? aya(1, 1) : nextA, nu = audioUrl(nx, k); if (pre.dataset.u !== nu) { pre.dataset.u = nu; pre.src = nu; pre.load(); } }
+    if (nextA) { const nx = needsBasmala(nextA) && !skipB && nextA !== a ? aya(1, 1) : nextA, nu = audioUrl(nx, k); if (pre.dataset.u !== nu) { pre.dataset.u = nu; pre.src = nu; pre.load(); }
+      cacheAudio(nu); }   // téléchargé tout de suite dans le cache : le mobile ne précharge pas toujours, le cache oui
   };
   start();
 }

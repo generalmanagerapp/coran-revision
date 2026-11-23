@@ -1,7 +1,14 @@
 {
-  "version": "1.9.6",
+  "version": "1.9.7",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.9.7",
+      "date": "2026-11-23",
+      "notes": [
+        "Lecture : l'aya suivante est téléchargée dès le début de l'aya en cours (cache), enchaînement sans attente réseau"
+      ]
+    },
     {
       "version": "1.9.6",
       "date": "2026-11-23",
