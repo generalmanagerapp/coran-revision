@@ -1,7 +1,14 @@
 {
-  "version": "1.8.7",
+  "version": "1.8.8",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.8.8",
+      "date": "2026-11-23",
+      "notes": [
+        "Correction : l'audio se relance à nouveau (sans réglage)"
+      ]
+    },
     {
       "version": "1.8.7",
       "date": "2026-11-23",

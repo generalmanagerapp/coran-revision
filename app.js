@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.7';
+const VERSION = '1.8.8';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -566,6 +566,7 @@ function setHint(c) {
 function finish(c, g, html) {
   c.answered = true; c.g = g;
   const t = c.q.target;
+  if (!c.q.audio && (g !== 'ok' || c.q.seq)) { if (c.q.seq) playSeq(c.q.seq); else play(t); }
   const msg = { ok: `${ic('circle-check')} Bravo !`, mid: `${ic('alert-circle')} Presque`, ko: `${ic('circle-x')} Raté` }[g];
   let out = html || `<div class="result ${g}">${msg}</div>`;
   if (!html) out += revealBlock(t, c.q) + `<div class="btnrow"><button class="btn gold" data-nextcard>Suivant →</button></div>`;
