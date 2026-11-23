@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '1.8.5';
+const VERSION = '1.8.6';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -266,6 +266,7 @@ const AUDIO_CACHE = 'murajaa-audio';
 async function cacheAudio(url) {
   try { const c = await caches.open(AUDIO_CACHE); if (await c.match(url)) return true; const r = await fetch(url, { mode: 'cors' }); if (!r.ok) return false; await c.put(url, r); return true; } catch (e) { return false; }
 }
+function stopAudio() { player.onended = null; player.pause(); }
 function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2500); }
 function playSeq(list) { let i = 0; const go = () => { if (i < list.length) play(list[i++], go); }; go(); }
 
@@ -491,6 +492,7 @@ function endChallenge() {
 }
 
 function newCard() {
+  stopAudio();
   const deck = $('#deck');
   deck.innerHTML = '';
   if (!S.selected.length) {
@@ -755,6 +757,7 @@ function attachSwipe(c) {
   el.addEventListener('touchmove', e => { if (drag && locked === 'x') e.preventDefault(); }, { passive: false });
 }
 function swipeOut(c, dir) {
+  stopAudio();
   if (c.out) return; c.out = true;
   if (recog) recog.stop();
   const el = c.el; el.classList.add('fly');

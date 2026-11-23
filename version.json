@@ -1,7 +1,14 @@
 {
-  "version": "1.8.5",
+  "version": "1.8.6",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "1.8.6",
+      "date": "2026-11-23",
+      "notes": [
+        "Changer de carte coupe l'audio en cours"
+      ]
+    },
     {
       "version": "1.8.5",
       "date": "2026-11-23",
