@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.3.1';
+const VERSION = '2.3.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -640,7 +640,7 @@ function renderCard(c) {
   }
   body += `<div data-after></div>`;
   el.innerHTML = `<div class="stamp r">SU</div><div class="stamp l">À REVOIR</div>
-    <div class="head"><span class="tag">${ic(m.icon)} ${m.label}</span><span>${esc(surahName(q.target.s))}${q.hideRef ? '' : ''}</span></div>
+    <div class="head"><span class="tag">${ic(m.icon)} ${m.label}</span></div>
     <div class="body">${body}</div>`;
   if (q.mode === 'sourate') $('.head span:last-child', el).textContent = 'Sourate ?';
   setHint(c);
