@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -30,6 +30,7 @@ const MODES = {
   numero:     { label: 'Numéro du verset', icon: 'hash', g: 'quiz', d: 'Retrouve le numéro du verset' },
   trad:       { label: 'Traduction → verset', icon: 'language', g: 'quiz', d: 'Retrouve le verset à partir du français' },
   intrus:     { label: 'L’intrus',       icon: 'list-details', g: 'quiz', d: 'Quel verset n’est pas de la sourate ?' },
+  ordsou:     { label: 'Ordre des sourates', icon: 'list-check', g: 'quiz', d: 'Remets les sourates dans l’ordre du Coran' },
   ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais le verset' },
   recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin du verset' },
   lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
@@ -86,7 +87,7 @@ const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  modes: { ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
   settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
@@ -452,6 +453,14 @@ function buildQuestion(mode) {
       const opts = shuffle([...set]).map(s => ({ html: `${s}. ${esc(SURAHS[s - 1].tr)} <span style="font-family:var(--ar);float:right">${SURAHS[s - 1].ar}</span>`, good: s === x.s, fr: true }));
       return { mode, target: x, prompt: 'De quelle sourate vient ce verset ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
     }
+    case 'ordsou': {
+      const n = LEVEL() === 'facile' ? 3 : LEVEL() === 'difficile' ? 5 : 4;
+      const sel = [...new Set(S.selected)]; if (sel.length < 3) return null;
+      const ss = shuffle(sel).slice(0, Math.min(n, sel.length)).sort((a, b) => a - b);
+      const oseq = ss.map(v => ({ s: v, nw: [String(v)] }));
+      const items = oseq.map(a => ({ a, html: `${esc(SURAHS[a.s - 1].tr)} <span style="font-family:var(--ar);float:right">${SURAHS[a.s - 1].ar}</span>` }));
+      return { mode, target: aya(ss[0], 1), oseq, prompt: 'Remets ces sourates dans l’ordre du Coran', items: shuffle(items) };
+    }
     case 'ordre': {
       const x = pickTarget(a => inPool(aya(a.s, a.a + 3))); if (!x) return null;
       const seq = [x, aya(x.s, x.a + 1), aya(x.s, x.a + 2), aya(x.s, x.a + 3)];
@@ -656,7 +665,7 @@ function renderEff(c) {
 function setHint(c) {
   const h = $('#deckHint');
   if (chall) return tickChallenge();
-  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.mode === 'ordre' ? 'Fais glisser les versets dans le bon ordre, puis valide' : c.q.words ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.words ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -664,7 +673,7 @@ function setHint(c) {
 function finish(c, g, html) {
   c.answered = true; c.g = g;
   const t = c.q.target;
-  if (!c.q.audio && (g !== 'ok' || c.q.seq)) { if (c.q.seq) playSeq(c.q.seq); else play(t); }
+  if (!c.q.audio && !c.q.oseq && (g !== 'ok' || c.q.seq)) { if (c.q.seq) playSeq(c.q.seq); else play(t); }
   const msg = { ok: `${ic('circle-check')} Bravo !`, mid: `${ic('alert-circle')} Presque`, ko: `${ic('circle-x')} Raté` }[g];
   let out = html || `<div class="result ${g}">${msg}</div>`;
   if (!html) out += revealBlock(t, c.q) + `<div class="btnrow"><button class="btn gold" data-nextcard>Suivant →</button></div>`;
@@ -675,7 +684,8 @@ function finish(c, g, html) {
 }
 function revealBlock(t, q) {
   let s = `<div class="reveal">`;
-  if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}" aria-label="Écouter">${ic('volume')}</button></div>`;
+  if (q && q.oseq) s += q.oseq.map((a, i) => `<div class="ref">${i + 1}. ${esc(SURAHS[a.s - 1].tr)} · <span style="font-family:var(--ar)">${SURAHS[a.s - 1].ar}</span></div>`).join('');
+  else if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}" aria-label="Écouter">${ic('volume')}</button></div>`;
   else { const t2 = (q && q.revealAya) || t; s += (q && q.revealAya ? '<div class="muted" style="text-align:center">L’intrus était :</div>' : '') + arBlock(t2.ar, 'small') + frBlock(t2) + refLine(t2); }
   return s + `</div>`;
 }
@@ -764,10 +774,10 @@ function checkOrder(c) {
   const key = a => a.nw.join(' ');   // deux ayat identiques sont interchangeables
   let wrong = 0;
   els.forEach((el, p) => {
-    const it = q.items[+el.dataset.idx], ok = key(it.a) === key(q.seq[p]);
+    const it = q.items[+el.dataset.idx], ok = key(it.a) === key((q.oseq || q.seq)[p]);
     if (!ok) wrong++;
     el.classList.add(ok ? 'good' : 'bad');
-    el.querySelector('.grip').outerHTML = `<span class="num">${ok ? p + 1 : q.seq.findIndex(a => key(a) === key(it.a)) + 1}</span>`;
+    el.querySelector('.grip').outerHTML = `<span class="num">${ok ? p + 1 : (q.oseq || q.seq).findIndex(a => key(a) === key(it.a)) + 1}</span>`;
   });
   $('[data-ordrow]', c.el).remove();
   finish(c, wrong === 0 ? 'ok' : wrong <= 2 ? 'mid' : 'ko');

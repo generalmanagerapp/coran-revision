@@ -1,7 +1,14 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.3.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Nouvel exercice : Ordre des sourates (glisser pour remettre dans l'ordre du Coran)"
+      ]
+    },
     {
       "version": "2.2.0",
       "date": "2026-11-23",
