@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.4.1';
+const VERSION = '2.4.2';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -356,7 +356,7 @@ function buildQuestion(mode) {
       const x = pickTarget(a => a.tk.length >= 4 && a.tk.length <= 20); if (!x) return null;
       const alt = altWord(x); if (!alt) return null;
       const words = x.tk.slice(); words[alt.i] = alt.word;
-      return { mode, target: x, prompt: 'Un mot a été remplacé : touche-le', words, bad: alt.i };
+      return { mode, target: x, prompt: 'Un mot a été remplacé : touche-le', errWords: words, bad: alt.i };
     }
     case 'faux': {
       const x = pickTarget(a => a.nw.filter(w => w.length >= 3).length >= 2); if (!x) return null;
@@ -627,7 +627,7 @@ function renderCard(c) {
   if (q.show) body += arBlock(q.show.ar) + frBlock(q.show) + refLine(q.show);
   if (q.showHtml) body += q.showHtml;
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
-  if (q.words) body += `<div class="wsel">${q.words.map((w, i) => `<button class="wtile" data-ws="${i}">${w}</button>`).join('')}</div>`;
+  if (q.errWords) body += `<div class="wsel">${q.errWords.map((w, i) => `<button class="wtile" data-ws="${i}">${w}</button>`).join('')}</div>`;
   if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip">${ic('grip-vertical')}</span><span class="ot">${it.html}</span></div>`).join('')}</div>
     <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>${ic('check')} Valider l’ordre</button></div>`;
   if (q.tiles) body += `${frBlock(q.target)}<div class="ref">${esc(surahName(q.target.s))} · ${q.target.s}:${q.target.a}</div>
@@ -665,7 +665,7 @@ function renderEff(c) {
 function setHint(c) {
   const h = $('#deckHint');
   if (chall) return tickChallenge();
-  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.words ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.errWords ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }

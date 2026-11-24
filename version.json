@@ -1,7 +1,14 @@
 {
-  "version": "2.4.1",
+  "version": "2.4.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.4.2",
+      "date": "2026-11-24",
+      "notes": [
+        "Correction : Mot à mot n'affiche plus la réponse"
+      ]
+    },
     {
       "version": "2.4.1",
       "date": "2026-11-24",
