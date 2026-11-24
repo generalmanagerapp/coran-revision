@@ -1,7 +1,14 @@
 {
-  "version": "2.5.2",
+  "version": "2.6.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.6.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Mot à mot : on peut retirer un mot placé en le retouchant, puis on valide"
+      ]
+    },
     {
       "version": "2.5.2",
       "date": "2026-11-24",

@@ -381,3 +381,7 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .wtile.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--red)}
 .wtile.dim{opacity:.5}
 .trq{font-size:18px;line-height:1.5;padding:6px 4px 10px;text-align:center}
+
+.mmw{font-size:inherit;padding:2px 10px;margin:2px;min-height:0}
+.mmw.good{background:var(--good-bg);color:var(--good-fg);border-color:var(--green)}
+.mmw.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--red)}

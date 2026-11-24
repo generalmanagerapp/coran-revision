@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.5.2';
+const VERSION = '2.6.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -666,7 +666,7 @@ function renderEff(c) {
 function setHint(c) {
   const h = $('#deckHint');
   if (chall) return tickChallenge();
-  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.errWords ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.errWords ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre, retouche un mot pour le retirer' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -725,13 +725,26 @@ document.addEventListener('click', e => {
     return;
   }
   if (b.hasAttribute('data-ordcheck')) return checkOrder(c);
-  if (b.dataset.tile !== undefined && !c.answered) {
-    const t = q.tiles[+b.dataset.tile]; c.step = c.step || 0; c.err = c.err || 0;
-    if (norm(t.w) === norm(q.words[c.step])) {
-      b.disabled = true; b.classList.add('used');
-      $('[data-mmans]', c.el).insertAdjacentHTML('beforeend', (c.step ? ' ' : '') + q.words[c.step]);
-      if (++c.step === q.words.length) { $('.mmcur', c.el).remove(); finish(c, c.err === 0 ? 'ok' : c.err <= 2 ? 'mid' : 'ko'); }
-    } else { c.err++; b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 400); }
+  if ((b.dataset.tile !== undefined || b.dataset.mmback !== undefined || b.hasAttribute('data-mmcheck')) && !c.answered) {
+    c.placed = c.placed || [];
+    const line = $('[data-mmans]', c.el), rowEl = $('[data-after]', c.el);
+    const redraw = () => {
+      line.innerHTML = c.placed.map(i => `<button class="wtile mmw" data-mmback="${i}">${q.tiles[i].w}</button>`).join(' ');
+      rowEl.innerHTML = c.placed.length === q.words.length ? `<div class="btnrow"><button class="btn gold" data-mmcheck>${ic('check')} Valider</button></div>` : '';
+    };
+    if (b.dataset.tile !== undefined) {
+      const i = +b.dataset.tile; if (c.placed.includes(i)) return;
+      c.placed.push(i); b.disabled = true; b.classList.add('used'); redraw();
+    } else if (b.dataset.mmback !== undefined) {
+      const i = +b.dataset.mmback; c.placed = c.placed.filter(x => x !== i);
+      const t = $(`[data-tile="${i}"]`, c.el); if (t) { t.disabled = false; t.classList.remove('used'); }
+      redraw();
+    } else {
+      let wrong = 0;
+      $$('[data-mmback]', c.el).forEach((el, p) => { const ok = norm(q.tiles[+el.dataset.mmback].w) === norm(q.words[p]); if (!ok) wrong++; el.classList.add(ok ? 'good' : 'bad'); el.disabled = true; });
+      $('.mmcur', c.el)?.remove(); rowEl.innerHTML = '';
+      finish(c, wrong === 0 ? 'ok' : wrong <= 2 ? 'mid' : 'ko', null, wrong);
+    }
     return;
   }
   if (b.hasAttribute('data-effok') && !c.answered) {
