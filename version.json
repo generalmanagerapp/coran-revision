@@ -1,7 +1,14 @@
 {
-  "version": "2.4.2",
+  "version": "2.5.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.5.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Mot à mot : l'audio du verset se lance après un délai réglable (5 à 30 s, ou désactivé)"
+      ]
+    },
     {
       "version": "2.4.2",
       "date": "2026-11-24",

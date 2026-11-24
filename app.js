@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.4.2';
+const VERSION = '2.5.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -90,7 +90,7 @@ const defaultState = () => ({
   modes: { ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
-  settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
+  settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', mmAudio: 10, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
@@ -646,6 +646,7 @@ function renderCard(c) {
   setHint(c);
   if (userActed && (q.audio || q.forcePlay)) play(q.target);
   if (q.efface) { c.level = 0; renderEff(c); }
+  const hd = +S.settings.mmAudio; if (q.tiles && hd > 0) setTimeout(() => { if (currentCard === c && !c.answered && userActed) play(q.target); }, hd * 1000);
 }
 /* Effacement progressif : 0 texte complet → 1 un tiers caché → 2 deux tiers → 3 premières lettres → 4 rien */
 function renderEff(c) {
@@ -1024,7 +1025,8 @@ function renderSettings() {
   ${sec('ex', 'cards', 'Exercices', `${nMod} sur ${total} actifs`,
     Object.entries(GROUPS).map(([g, gl]) => `<h4>${gl}</h4><div class="set">${Object.entries(MODES).filter(([, m]) => m.g === g).map(([k, m]) => `<label><span class="mlab">${ic(m.icon)} ${m.label}<small>${m.d}</small></span><input type="checkbox" data-mode-t="${k}" ${S.modes[k] ? 'checked' : ''}></label>`).join('')}</div>`).join(''))}
   ${sec('game', 'device-gamepad-2', 'Options de jeu', ({ facile: 'Facile', normal: 'Normal', difficile: 'Difficile' })[st.level || 'normal'],
-    `<div class="set"><div class="set"><label>Difficulté<select data-sel="level">${[['facile', 'Facile (3 choix, réponses au hasard)'], ['normal', 'Normal (4 choix, versets qui se ressemblent)'], ['difficile', 'Difficile (5 choix, sans aide de traduction)']].map(([v, l]) => `<option value="${v}" ${st.level === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    `<div class="set"><div class="set"><label>Audio d’aide au Mot à mot<select data-sel="mmAudio">${[[0, 'Désactivé'], [5, 'Après 5 secondes'], [10, 'Après 10 secondes'], [15, 'Après 15 secondes'], [20, 'Après 20 secondes'], [30, 'Après 30 secondes']].map(([v, l]) => `<option value="${v}" ${+(st.mmAudio ?? 10) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    <div class="set"><label>Difficulté<select data-sel="level">${[['facile', 'Facile (3 choix, réponses au hasard)'], ['normal', 'Normal (4 choix, versets qui se ressemblent)'], ['difficile', 'Difficile (5 choix, sans aide de traduction)']].map(([v, l]) => `<option value="${v}" ${st.level === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
      ${chk('voice', 'Reconnaissance vocale', SR ? 'Disponible sur cet appareil' : 'Non disponible ici → auto-évaluation', SR ? '' : 'disabled')}
      <label>Récitation<select data-sel="reciteType">${[['mix', 'Suite ou fin (mix)'], ['suite', 'Verset suivant'], ['fin', 'Fin du verset']].map(([v, l]) => `<option value="${v}" ${st.reciteType === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
   ${sec('audio', 'volume', 'Audio', (RECITERS[st.reciter] || RECITERS.Alafasy_128kbps).n,
@@ -1064,7 +1066,7 @@ $('#settingsBox').addEventListener('change', e => {
   if (t.dataset.modeT) { S.modes[t.dataset.modeT] = t.checked; if (!enabledModes().length) { S.modes[t.dataset.modeT] = true; t.checked = true; } }
   if (t.dataset.set) S.settings[t.dataset.set] = t.checked;
   if (t.dataset.set === 'opening' && t.checked) { S.lastOpening = null; save(); setTimeout(showOpening, 150); }
-  if (t.dataset.sel) { S.settings[t.dataset.sel] = (t.dataset.sel === 'goal' || t.dataset.sel === 'arScale') ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); if (t.dataset.sel === 'level') S.settings.pieges = t.value !== 'facile'; }
+  if (t.dataset.sel) { S.settings[t.dataset.sel] = (t.dataset.sel === 'goal' || t.dataset.sel === 'arScale' || t.dataset.sel === 'mmAudio') ? +t.value : t.value; if (t.dataset.sel === 'reciter') play(aya(1, 1)); if (t.dataset.sel === 'level') S.settings.pieges = t.value !== 'facile'; }
   if (t.hasAttribute('data-importfile') && t.files[0]) return importData(t.files[0]);
   save(); applyScale(); renderModeBar(); renderSettings();
 });
