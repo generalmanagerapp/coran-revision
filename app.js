@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.3.0';
+const VERSION = '2.3.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -684,7 +684,7 @@ function finish(c, g, html) {
 }
 function revealBlock(t, q) {
   let s = `<div class="reveal">`;
-  if (q && q.oseq) s += q.oseq.map((a, i) => `<div class="ref">${i + 1}. ${esc(SURAHS[a.s - 1].tr)} · <span style="font-family:var(--ar)">${SURAHS[a.s - 1].ar}</span></div>`).join('');
+  if (q && q.oseq) s += q.oseq.map((a, i) => `<div class="ref">${i + 1}. ${esc(SURAHS[a.s - 1].tr)} · <span style="font-family:var(--ar)">${SURAHS[a.s - 1].ar}</span> · sourate n° ${a.s}</div>`).join('');
   else if (q && q.mode === 'ordre') s += q.seq.map(a => arBlock(a.ar, 'small') + frBlock(a)).join('') + `<div class="ref">${esc(surahName(q.seq[0].s))} · ${q.seq[0].s}:${q.seq[0].a}–${q.seq[3].a} <button class="play" data-playseq="${q.seq[0].s}:${q.seq[0].a}:${q.seq.length}" aria-label="Écouter">${ic('volume')}</button></div>`;
   else { const t2 = (q && q.revealAya) || t; s += (q && q.revealAya ? '<div class="muted" style="text-align:center">L’intrus était :</div>' : '') + arBlock(t2.ar, 'small') + frBlock(t2) + refLine(t2); }
   return s + `</div>`;
@@ -777,6 +777,7 @@ function checkOrder(c) {
     const it = q.items[+el.dataset.idx], ok = key(it.a) === key((q.oseq || q.seq)[p]);
     if (!ok) wrong++;
     el.classList.add(ok ? 'good' : 'bad');
+    if (q.oseq) el.querySelector('.ot').insertAdjacentHTML('afterbegin', `<small class="muted">n° ${it.a.s}</small> `);
     el.querySelector('.grip').outerHTML = `<span class="num">${ok ? p + 1 : (q.oseq || q.seq).findIndex(a => key(a) === key(it.a)) + 1}</span>`;
   });
   $('[data-ordrow]', c.el).remove();

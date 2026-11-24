@@ -1,7 +1,14 @@
 {
-  "version": "2.3.0",
+  "version": "2.3.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.3.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Ordre des sourates : numéro de sourate affiché dans la correction"
+      ]
+    },
     {
       "version": "2.3.0",
       "date": "2026-11-24",
