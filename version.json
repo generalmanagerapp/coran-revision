@@ -1,7 +1,14 @@
 {
-  "version": "2.5.1",
+  "version": "2.5.2",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.5.2",
+      "date": "2026-11-24",
+      "notes": [
+        "Réglage de l'audio d'aide Mot à mot retiré (fixé à 15 s)"
+      ]
+    },
     {
       "version": "2.5.1",
       "date": "2026-11-24",
