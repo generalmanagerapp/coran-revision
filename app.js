@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.6.0';
+const VERSION = '2.6.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -646,7 +646,7 @@ function renderCard(c) {
   setHint(c);
   if (userActed && (q.audio || q.forcePlay)) play(q.target);
   if (q.efface) { c.level = 0; renderEff(c); }
-  const hd = 15; if (q.tiles) setTimeout(() => { if (currentCard === c && !c.answered && userActed) play(q.target); }, hd * 1000);
+  if (q.tiles) setTimeout(() => { const r = $('.ref', el); if (currentCard === c && !c.answered && r && !$('.play', r)) r.insertAdjacentHTML('beforeend', ` <button class="play" data-play="${q.target.s}:${q.target.a}" aria-label="Écouter">${ic('volume')}</button>`); }, 15000);
 }
 /* Effacement progressif : 0 texte complet → 1 un tiers caché → 2 deux tiers → 3 premières lettres → 4 rien */
 function renderEff(c) {

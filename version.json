@@ -1,7 +1,14 @@
 {
-  "version": "2.6.0",
+  "version": "2.6.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.6.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Mot à mot : après 15 s le haut-parleur apparaît (plus de lecture automatique)"
+      ]
+    },
     {
       "version": "2.6.0",
       "date": "2026-11-24",
