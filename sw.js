@@ -1,6 +1,6 @@
 const AUDIO = 'murajaa-audio';
-const CACHE = 'coran-revision-v2.3.2';
-const SHELL = ['./', 'index.html', 'ads-config.js?v=2.3.2', 'privacy.html', 'style.css?v=2.3.2', 'app.js?v=2.3.2', 'manifest.webmanifest', 'data/quran.json', 'data/hadiths.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/og-image.png', 'icons/logo-mark.svg', 'icons/favicon-32.png', 'icons/apple-touch-icon.png', 'icons/icon-maskable-512.png', 'fonts/amiri-quran-arabic-400-normal.woff2', 'fonts/uthmanic-hafs.woff2?v=2.3.2'];
+const CACHE = 'coran-revision-v2.4.0';
+const SHELL = ['./', 'index.html', 'ads-config.js?v=2.4.0', 'privacy.html', 'style.css?v=2.4.0', 'app.js?v=2.4.0', 'manifest.webmanifest', 'data/quran.json', 'data/hadiths.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/og-image.png', 'icons/logo-mark.svg', 'icons/favicon-32.png', 'icons/apple-touch-icon.png', 'icons/icon-maskable-512.png', 'fonts/amiri-quran-arabic-400-normal.woff2', 'fonts/uthmanic-hafs.woff2?v=2.4.0'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('coran-revision-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

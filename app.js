@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.3.2';
+const VERSION = '2.4.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -26,13 +26,15 @@ const MODES = {
   ordre:      { label: 'Remettre en ordre', icon: 'arrows-sort', g: 'quiz', d: 'Fais glisser 4 versets dans l’ordre' },
   motamot:    { label: 'Mot à mot',      icon: 'blocks', g: 'quiz', d: 'Reconstitue le verset en touchant les mots dans l’ordre' },
   erreur:     { label: 'Trouve l’erreur', icon: 'zoom-exclamation', g: 'quiz', d: 'Un mot a été remplacé : touche-le' },
-  faux:       { label: 'Vrai ou faux',   icon: 'help-circle', g: 'quiz', d: 'Ce verset est-il récité correctement ?' },
+  faux:       { label: 'Vrai ou faux',   icon: 'help-circle', g: 'quiz', d: 'Ce verset est-il écrit correctement ?' },
   numero:     { label: 'Numéro du verset', icon: 'hash', g: 'quiz', d: 'Retrouve le numéro du verset' },
   trad:       { label: 'Traduction → verset', icon: 'language', g: 'quiz', d: 'Retrouve le verset à partir du français' },
   intrus:     { label: 'L’intrus',       icon: 'list-details', g: 'quiz', d: 'Quel verset n’est pas de la sourate ?' },
   ordsou:     { label: 'Ordre des sourates', icon: 'list-check', g: 'quiz', d: 'Remets les sourates dans l’ordre du Coran' },
   ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais le verset' },
   recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin du verset' },
+  recfull:    { label: 'Réciter le verset', icon: 'microphone', g: 'recit', d: 'Récite tout le verset à partir de sa référence' },
+  corrige:    { label: 'Réciter avec erreur', icon: 'zoom-exclamation', g: 'recit', d: 'Un mot est faux : récite le verset correct' },
   lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
   echo:       { label: 'Écho',           icon: 'ear', g: 'memo', d: 'Écoute le verset, puis répète-le sans le texte' },
   efface:     { label: 'Effacement',     icon: 'brain', g: 'memo', d: 'Le texte s’efface petit à petit : tiens jusqu’au bout !' },
@@ -87,7 +89,7 @@ const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  modes: { recfull: true, corrige: true, ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
   settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
@@ -362,7 +364,7 @@ function buildQuestion(mode) {
       const x = pickTarget(a => a.nw.filter(w => w.length >= 3).length >= 2); if (!x) return null;
       let alt = Math.random() < .5 ? altWord(x) : null, shown = x.tk.join(' ');
       if (alt) { const t = x.tk.slice(); t[alt.i] = alt.word; shown = t.join(' '); }
-      return { mode, target: x, prompt: 'Ce verset est-il récité correctement ?', showHtml: arBlock(shown),
+      return { mode, target: x, prompt: 'Ce verset est-il écrit correctement ?', showHtml: arBlock(shown),
         opts: [{ html: 'Correct', good: !alt, fr: true }, { html: 'Un mot est faux', good: !!alt, fr: true }] };
     }
     case 'numero': {
@@ -467,6 +469,17 @@ function buildQuestion(mode) {
       const labels = distinctPrefixes(seq.map(a => a.tk), 5, 12);
       const items = seq.map((a, i) => ({ a, html: labels[i], pos: i }));
       return { mode, target: x, seq, prompt: `Remets ces versets dans l’ordre (${esc(surahName(x.s))})`, items: shuffle(items) };
+    }
+    case 'recfull': {
+      const x = pickTarget(a => a.tk.length >= 3 && a.tk.length <= 25); if (!x) return null;
+      return { mode, recit: true, target: x, prompt: 'Récite ce verset en entier',
+        showHtml: `<div class="ref" style="font-size:18px;margin:14px 0">${esc(surahName(x.s))} · verset ${x.a}</div>${LEVEL() === 'difficile' ? '' : frBlock(x)}`, expected: x.tk };
+    }
+    case 'corrige': {
+      const x = pickTarget(a => a.tk.length >= 3 && a.tk.length <= 25 && a.nw.some(w => w.length >= 3)); if (!x) return null;
+      const alt = altWord(x); if (!alt) return null;
+      const t = x.tk.slice(); t[alt.i] = alt.word;
+      return { mode, recit: true, target: x, prompt: 'Un mot est faux : récite le verset correct', showHtml: arBlock(t.join(' ')), expected: x.tk };
     }
     case 'recite': {
       let t = S.settings.reciteType; if (t === 'mix') t = Math.random() < .5 ? 'suite' : 'fin';

@@ -1,7 +1,15 @@
 {
-  "version": "2.3.2",
+  "version": "2.4.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.4.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Nouveaux exercices de récitation : Réciter le verset (en entier) et Réciter avec erreur (un mot est faux, récite le correct)",
+        "Vrai ou faux : « écrit » au lieu de « récité »"
+      ]
+    },
     {
       "version": "2.3.2",
       "date": "2026-11-24",
