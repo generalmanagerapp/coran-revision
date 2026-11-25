@@ -1,7 +1,14 @@
 {
-  "version": "2.6.1",
+  "version": "2.7.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.7.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Nouveaux exercices : Quelle différence ? (versets qui se ressemblent) et Sourate suivante"
+      ]
+    },
     {
       "version": "2.6.1",
       "date": "2026-11-24",
