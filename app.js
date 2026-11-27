@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.9.0';
+const VERSION = '2.10.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -33,6 +33,7 @@ const MODES = {
   ordsou:     { label: 'Ordre des sourates', icon: 'list-check', g: 'quiz', d: 'Remets les sourates dans l’ordre du Coran' },
   diff:       { label: 'Quelle différence ?', icon: 'zoom-exclamation', g: 'quiz', d: 'Deux versets qui se ressemblent : touche le mot qui change' },
   apres:      { label: 'Sourate suivante', icon: 'list-check', g: 'quiz', d: 'Quelle sourate vient juste après ?' },
+  premlettre: { label: 'Première lettre', icon: 'abc', g: 'quiz', d: 'Choisis la lettre par laquelle commence le verset' },
   ecoute:     { label: 'Écoute',         icon: 'headphones', g: 'quiz', d: 'Écoute et reconnais le verset' },
   recite:     { label: 'Réciter',        icon: 'microphone', g: 'recit', d: 'Récite la suite ou la fin du verset' },
   lettres:    { label: 'Premières lettres', icon: 'abc', g: 'recit', d: 'Récite avec seulement la 1re lettre de chaque mot' },
@@ -89,7 +90,7 @@ const SRS_STEPS = [10 * 60e3, 864e5, 3 * 864e5, 7 * 864e5, 16 * 864e5, 35 * 864e
 /* ---------- State ---------- */
 const defaultState = () => ({
   selected: [],
-  modes: { diff: true, apres: true, ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
+  modes: { premlettre: true, diff: true, apres: true, ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
   settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', tajweed: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
@@ -504,6 +505,13 @@ function buildQuestion(mode) {
       const opts = shuffle([...set]).map(s => ({ html: `${s}. ${esc(SURAHS[s - 1].tr)} <span style="font-family:var(--ar);float:right">${SURAHS[s - 1].ar}</span>`, good: s === x.s, fr: true }));
       return { mode, target: x, prompt: 'De quelle sourate vient ce verset ?', showHtml: arBlock(x.ar) + frBlock(x), opts, hideRef: true };
     }
+    case 'premlettre': {
+      const x = pickTarget(a => a.nw.length && a.nw[0].length); if (!x) return null;
+      const ans = x.nw[0][0], n = LEVEL() === 'facile' ? 4 : LEVEL() === 'difficile' ? 6 : 5;
+      const letters = shuffle([...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'].filter(l => l !== ans)).slice(0, n - 1);
+      return { mode, target: x, fl: true, ans, letters: shuffle([ans, ...letters]), prompt: 'Par quelle lettre commence ce verset ?',
+        showHtml: frBlock(x) + `<div class="ref">${esc(surahName(x.s))} · verset ${x.a}</div>` };
+    }
     case 'diff': {
       for (let k = 0; k < 40; k++) {
         const x = pickTarget(a => a.tk.length >= 4 && a.tk.length <= 20); if (!x) return null;
@@ -701,6 +709,8 @@ function renderCard(c) {
   if (q.show) body += arBlock(q.show.ar) + frBlock(q.show) + refLine(q.show);
   if (q.showHtml) body += q.showHtml;
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
+  if (q.fl) body += `<div class="flwrap"><button class="flslot" data-flslot aria-label="Ta réponse">؟</button></div>
+    <div class="fltiles">${q.letters.map(l => `<button class="wtile fl" data-fl="${l}">${l}</button>`).join('')}</div>`;
   if (q.errWords) body += `<div class="wsel">${q.errWords.map((w, i) => `<button class="wtile" data-ws="${i}">${w}</button>`).join('')}</div>`;
   if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip">${ic('grip-vertical')}</span><span class="ot">${it.html}</span></div>`).join('')}</div>
     <div class="btnrow" data-ordrow><button class="btn gold" data-ordcheck>${ic('check')} Valider l’ordre</button></div>`;
@@ -720,6 +730,7 @@ function renderCard(c) {
   setHint(c);
   if (userActed && (q.audio || q.forcePlay)) play(q.target);
   if (q.efface) { c.level = 0; renderEff(c); }
+  if (q.fl) attachFl(c);
   if (q.tiles) setTimeout(() => { const r = $('.ref', el); if (currentCard === c && !c.answered && r && !$('.play', r)) r.insertAdjacentHTML('beforeend', ` <button class="play" data-play="${q.target.s}:${q.target.a}" aria-label="Écouter">${ic('volume')}</button>`); }, 15000);
 }
 /* Effacement progressif : 0 texte complet → 1 un tiers caché → 2 deux tiers → 3 premières lettres → 4 rien */
@@ -737,10 +748,50 @@ function renderEff(c) {
   $('[data-lvl]', c.el).innerHTML = names.map((nm, i) => `<span class="${i < L ? 'done' : i === L ? 'cur' : ''}">${ic(i < L ? 'star-filled' : 'star')}<small>${nm}</small></span>`).join('');
 }
 
+function flSelect(c, l) {
+  if (c.answered) return;
+  c.flSel = l;
+  const slot = $('[data-flslot]', c.el); slot.textContent = l || '؟'; slot.classList.toggle('set', !!l);
+  $$('[data-fl]', c.el).forEach(t => t.classList.toggle('used', t.dataset.fl === l));
+  $('[data-after]', c.el).innerHTML = l ? `<div class="btnrow"><button class="btn gold" data-flcheck>${ic('check')} Valider</button></div>` : '';
+}
+function attachFl(c) {
+  let d = null;
+  c.el.addEventListener('pointerdown', e => {
+    const t = e.target.closest('[data-fl]'); if (!t || c.answered) return;
+    d = { t, x: e.clientX, y: e.clientY, g: null };
+  });
+  c.el.addEventListener('pointermove', e => {
+    if (!d) return;
+    if (!d.g && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8) {
+      d.g = d.t.cloneNode(true); d.g.className = 'wtile fl flghost'; document.body.appendChild(d.g);
+      try { c.el.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    if (d.g) { e.preventDefault(); d.g.style.left = e.clientX + 'px'; d.g.style.top = e.clientY + 'px'; }
+  });
+  const end = e => {
+    if (!d) return;
+    if (d.g) {
+      const over = document.elementFromPoint(e.clientX, e.clientY);
+      d.g.remove();
+      c.flDragged = true; setTimeout(() => { c.flDragged = false; }, 50);
+      if (over && over.closest('.flwrap')) flSelect(c, d.t.dataset.fl);
+    }
+    d = null;
+  };
+  c.el.addEventListener('pointerup', end); c.el.addEventListener('pointercancel', end);
+}
+function checkFl(c) {
+  if (c.answered || !c.flSel) return;
+  const ok = c.flSel === c.q.ans;
+  $$('[data-fl]', c.el).forEach(t => { t.disabled = true; if (t.dataset.fl === c.q.ans) t.classList.add('good'); else if (t.dataset.fl === c.flSel) t.classList.add('bad'); });
+  $('[data-flslot]', c.el).classList.add(ok ? 'good' : 'bad');
+  finish(c, ok ? 'ok' : 'ko');
+}
 function setHint(c) {
   const h = $('#deckHint');
   if (chall) return tickChallenge();
-  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.diff ? 'Touche le mot qui change' : c.q.errWords ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre, retouche un mot pour le retirer' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
+  if (!c.answered) h.textContent = c.q.recit ? 'Récite à voix haute, puis révèle' : c.q.items ? 'Fais glisser dans le bon ordre, puis valide' : c.q.fl ? 'Touche ou glisse la lettre dans la case, puis valide' : c.q.diff ? 'Touche le mot qui change' : c.q.errWords ? 'Touche le mot faux' : c.q.tiles ? 'Touche les mots dans l’ordre, retouche un mot pour le retirer' : c.q.efface ? 'Récite, puis passe au niveau suivant' : 'Choisis la bonne réponse';
   else if (c.selfEval) h.textContent = '← À revoir   ·   Je savais →';
   else h.textContent = 'Glisse la carte pour continuer →';
 }
@@ -800,6 +851,9 @@ document.addEventListener('click', e => {
     return;
   }
   if (b.hasAttribute('data-ordcheck')) return checkOrder(c);
+  if (b.dataset.fl !== undefined && !c.answered) { if (c.flDragged) return; return flSelect(c, c.flSel === b.dataset.fl ? null : b.dataset.fl); }
+  if (b.hasAttribute('data-flslot') && !c.answered) return flSelect(c, null);
+  if (b.hasAttribute('data-flcheck')) return checkFl(c);
   if ((b.dataset.tile !== undefined || b.dataset.mmback !== undefined || b.hasAttribute('data-mmcheck')) && !c.answered) {
     c.placed = c.placed || [];
     const line = $('[data-mmans]', c.el), rowEl = $('[data-after]', c.el);
