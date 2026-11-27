@@ -385,3 +385,8 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .mmw{font-size:inherit;padding:2px 10px;margin:2px;min-height:0}
 .mmw.good{background:var(--good-bg);color:var(--good-fg);border-color:var(--green)}
 .mmw.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--red)}
+
+.tj-h,.tj-s,.tj-l{color:#9aa0a6}.tj-n{color:#e8801a}.tj-p{color:#e8a21a}.tj-o{color:#e03a3a}.tj-m{color:#c2185b}
+.tj-q{color:#2f7fe0}.tj-f{color:#e056a8}.tj-c{color:#c04ec0}.tj-g{color:#2aa65c}.tj-a{color:#1f9d8a}.tj-u{color:#8a9a5b}
+.tj-w{color:#5cb85c}.tj-i{color:#20a0c8}.tj-d,.tj-b{color:#7e9a8a}
+.tjleg{margin:8px 0 2px;font-size:13px}.tjleg summary{cursor:pointer;opacity:.8;padding:4px 0}.tjleg div{padding:2px 0}.tjdot{font-size:16px}

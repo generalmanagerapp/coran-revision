@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.7.0';
+const VERSION = '2.8.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -92,10 +92,11 @@ const defaultState = () => ({
   modes: { diff: true, apres: true, ordsou: true, intrus: true, erreur: true, faux: true, numero: true, trad: true, suivante: true, precedente: true, complete: true, mot: true, sourate: true, ordre: true, motamot: true, ecoute: true, recite: true, lettres: true, echo: true, efface: true },
   best: 0, goalDone: {},
   current: 'mix',
-  settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
+  settings: { theme: 'emeraude', trad: true, pieges: true, level: 'normal', tajweed: true, reciter: 'Alafasy_128kbps', reciteType: 'mix', voice: true, goal: 20, opening: true, arScale: 1, cacheListen: true, remindAt: '20:00' },
   srs: {}, days: {}, surah: {}, total: { n: 0, ok: 0 },
 });
 let S = load();
+if (S.settings.tajweed === undefined) S.settings.tajweed = true;
 if (!S.settings.level) S.settings.level = S.settings.pieges === false ? 'facile' : 'normal';
 const LEVEL = () => S.settings.level;
 if (!RECITERS[S.settings.reciter]) S.settings.reciter = 'Alafasy_128kbps';
@@ -131,6 +132,17 @@ function tokens(ar) {
   return out;
 }
 
+const TJ = new Map();
+async function loadTajweed() {
+  try { const f = await (await fetch('data/tajweed.json')).json(); AYAS.forEach((a, i) => { if (f[i] && f[i].length && !TJ.has(a.ar)) TJ.set(a.ar, f[i]); }); } catch (e) {}
+}
+function tjText(text) {
+  if (!S.settings.tajweed) return text;
+  const sp = TJ.get(text); if (!sp) return text;
+  let out = '', p = 0;
+  for (let i = 0; i < sp.length; i += 3) { const a = sp[i], b = sp[i + 1]; if (a < p) continue; out += text.slice(p, a) + `<span class="tj-${sp[i + 2]}">${text.slice(a, b)}</span>`; p = b; }
+  return out + text.slice(p);
+}
 async function loadData() {
   const res = await fetch('data/quran.json');
   const raw = await res.json();
@@ -144,6 +156,7 @@ async function loadData() {
       AYAS.push(a);
     });
   });
+  loadTajweed();
   for (const a of AYAS) { const k = tkey(a); if (!SAME.has(k)) SAME.set(k, []); SAME.get(k).push(a); }
   // index inversé pour retrouver les ayat proches (mutashabihat)
   for (const a of AYAS) for (const w of new Set(a.nw)) {
@@ -311,7 +324,7 @@ function playSeq(list) { let i = 0; const go = () => { if (i < list.length) { co
 
 /* ---------- Helpers d'affichage ---------- */
 function arSize(text) { const l = text.length; return l > 380 ? 'xs' : l > 160 ? 'small' : ''; }
-function arBlock(text, extra = '') { return `<div class="ar ${arSize(text)} ${extra}">${text}</div>`; }
+function arBlock(text, extra = '') { return `<div class="ar ${arSize(text)} ${extra}">${tjText(text)}</div>`; }
 function frBlock(a) { return S.settings.trad ? `<div class="fr">${esc(a.fr)}</div>` : ''; }
 function refLine(a) { return `<div class="ref">${esc(surahName(a.s))} · ${a.s}:${a.a} <button class="play" data-play="${a.s}:${a.a}" aria-label="Écouter">${ic('volume')}</button></div>`; }
 // préfixes minimaux pour distinguer des propositions (versets qui se ressemblent)
@@ -1057,6 +1070,8 @@ function renderSettings() {
   ${sec('look', 'palette', 'Apparence', (THEMES[st.theme] || THEMES.emeraude).name,
     `<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme ${st.theme === k ? 'on' : ''}" data-theme-pick="${k}"><span class="sw">${t.sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')}</div>
      <div class="set">${chk('trad', 'Traduction française', 'Hamidullah')}
+     ${chk('tajweed', 'Couleurs du tajwid', 'Sur les versets affichés en entier')}
+     <details class="tjleg"><summary>Légende des couleurs</summary>${[['h', 'Lettres muettes (hamzat wasl, lam solaire, silencieuses)'], ['n', 'Madd normal (2)'], ['p', 'Madd permis (2, 4 ou 6)'], ['o', 'Madd obligatoire (4-5)'], ['m', 'Madd nécessaire (6)'], ['q', 'Qalqala'], ['f', 'Ikhfa'], ['c', 'Ikhfa labial'], ['g', 'Ghunna'], ['a', 'Idgham avec ghunna'], ['u', 'Idgham sans ghunna'], ['w', 'Idgham labial'], ['i', 'Iqlab'], ['d', 'Idgham mutajanisayn / mutaqaribayn']].map(([k, l]) => `<div><span class="tj-${k} tjdot">●</span> ${l}</div>`).join('')}</details>
      <label>Taille du texte arabe<select data-sel="arScale">${[[.85, 'Petit'], [1, 'Normal'], [1.2, 'Grand'], [1.4, 'Très grand']].map(([v, l]) => `<option value="${v}" ${+st.arScale === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`)}
   ${sec('goal', 'target-arrow', 'Objectif & accueil', `${st.goal} cartes par jour`,
     `<div class="set"><label>Objectif du jour<select data-sel="goal">${[10, 20, 30, 50, 100].map(v => `<option value="${v}" ${+st.goal === v ? 'selected' : ''}>${v} cartes</option>`).join('')}</select></label>
@@ -1275,7 +1290,7 @@ function renderRead() {
   if (readS !== 1 && readS !== 9) h += `<div class="ar basm">${BASMALA}</div>`;
   for (let a = 1; a <= su.count; a++) {
     const x = aya(readS, a);
-    h += `<div class="ra" data-ra="${a}"><div class="ar">${x.ar} <span class="anum">﴿${arNum(a)}﴾</span></div>${S.settings.trad ? `<div class="fr">${a}. ${esc(x.fr)}</div>` : ''}</div>`;
+    h += `<div class="ra" data-ra="${a}"><div class="ar">${tjText(x.ar)} <span class="anum">﴿${arNum(a)}﴾</span></div>${S.settings.trad ? `<div class="fr">${a}. ${esc(x.fr)}</div>` : ''}</div>`;
   }
   $('#readBox').innerHTML = h;
   $('#readBox').classList.toggle('masked', readMask);
@@ -1364,7 +1379,7 @@ async function showOpening() {
   ov.innerHTML = `<div class="op-in">
     <img src="icons/logo-mark.svg" alt="" width="54" height="61">
     <div class="op-basm">${BASMALA}</div>
-    <section><h3>Duaa du jour</h3><div class="ar">${ay.map(x => x.ar + ` <span class="anum">﴿${arNum(x.a)}﴾</span>`).join(' ')}</div>
+    <section><h3>Duaa du jour</h3><div class="ar">${ay.map(x => tjText(x.ar) + ` <span class="anum">﴿${arNum(x.a)}﴾</span>`).join(' ')}</div>
       <p class="fr">${ay.map(x => esc(x.fr)).join(' ')}</p><small>${esc(surahName(ds))} · ${ds}:${da}${db > da ? '–' + db : ''} <button class="play" data-opplay aria-label="Écouter la duaa">${ic('volume')}</button></small></section>
     ${h ? `<section><h3>Hadith du jour</h3><p class="hd">${esc(h.t)}</p><small>${h.src}, n° ${h.n}${h.g ? ' · ' + h.g : ''}${h.tr ? ' · traduction de l’appli' : ''}</small></section>` : ''}
     <button class="btn gold" data-opgo>Bismillah, on commence</button></div>`;

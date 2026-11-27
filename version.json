@@ -1,7 +1,14 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.8.0",
+      "date": "2026-11-27",
+      "notes": [
+        "Couleurs du tajwid sur les versets (réglable + légende dans Réglages → Apparence)"
+      ]
+    },
     {
       "version": "2.7.0",
       "date": "2026-11-25",
