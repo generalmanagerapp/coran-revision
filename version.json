@@ -1,7 +1,14 @@
 {
-  "version": "2.8.1",
+  "version": "2.9.0",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.9.0",
+      "date": "2026-11-27",
+      "notes": [
+        "Tajwid : toucher une couleur affiche la règle et ce qu'il faut faire"
+      ]
+    },
     {
       "version": "2.8.1",
       "date": "2026-11-27",

@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.8.1';
+const VERSION = '2.9.0';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -143,6 +143,42 @@ function tjText(text) {
   for (let i = 0; i < sp.length; i += 3) { const a = sp[i], b = sp[i + 1]; if (a < p) continue; out += text.slice(p, a) + `<span class="tj-${sp[i + 2]}">${text.slice(a, b)}</span>`; p = b; }
   return out + text.slice(p);
 }
+const TJ_INFO = {
+  h: ['Hamzat al-wasl', 'Ne se prononce pas quand on enchaîne avec le mot d’avant. Se prononce seulement si on commence la lecture par ce mot.'],
+  l: ['Lam solaire (shamsiyya)', 'Le lam ne se prononce pas : on passe directement à la lettre suivante, qui porte la chadda.'],
+  s: ['Lettre muette', 'Cette lettre est écrite mais ne se prononce pas.'],
+  n: ['Madd naturel (tabi‘i)', 'Allonger 2 temps, pas plus.'],
+  p: ['Madd permis (‘arid / lin)', 'À l’arrêt sur ce mot : allonger 2, 4 ou 6 temps (garder la même durée partout). En enchaînant : 2 temps.'],
+  o: ['Madd obligatoire (muttasil / munfasil)', 'Allonger 4 ou 5 temps, car une hamza suit la lettre de madd (dans le même mot ou au début du mot suivant).'],
+  m: ['Madd nécessaire (lazim)', 'Allonger obligatoirement 6 temps.'],
+  q: ['Qalqala', 'Faire « rebondir » la lettre (ق ط ب ج د) quand elle est sans voyelle, plus fort à l’arrêt.'],
+  g: ['Ghunna', 'Nasaliser (son du nez) le ن ou le م avec chadda pendant 2 temps.'],
+  f: ['Ikhfa', 'Cacher le ن sakin / tanwin : son du nez pendant 2 temps, langue prête pour la lettre suivante.'],
+  c: ['Ikhfa labial (shafawi)', 'م sakin suivi de ب : lèvres fermées doucement, son du nez pendant 2 temps.'],
+  a: ['Idgham avec ghunna', 'Le ن sakin / tanwin se fond dans la lettre suivante (ي ن م و) avec son du nez pendant 2 temps.'],
+  u: ['Idgham sans ghunna', 'Le ن sakin / tanwin se fond complètement dans le ل ou le ر, sans son du nez.'],
+  w: ['Idgham labial (shafawi)', 'م sakin suivi de م : les fondre en un seul م avec chadda et son du nez pendant 2 temps.'],
+  i: ['Iqlab', 'Le ن sakin / tanwin devant ب se transforme en م caché : son du nez pendant 2 temps.'],
+  d: ['Idgham mutajanisayn', 'Deux lettres de même point de sortie : la première se fond dans la seconde.'],
+  b: ['Idgham mutaqaribayn', 'Deux lettres proches : la première se fond dans la seconde.']
+};
+function tjPop(span, k) {
+  const inf = TJ_INFO[k]; if (!inf) return;
+  $('#tjpop')?.remove();
+  const p = document.createElement('div'); p.id = 'tjpop';
+  p.innerHTML = `<b class="tj-${k}">● ${inf[0]}</b><div>${inf[1]}</div>`;
+  document.body.appendChild(p);
+  const r = span.getBoundingClientRect(), w = Math.min(320, innerWidth - 20);
+  p.style.width = w + 'px';
+  p.style.left = Math.max(10, Math.min(innerWidth - w - 10, r.left + r.width / 2 - w / 2)) + 'px';
+  const top = r.bottom + 8; p.style.top = (top + p.offsetHeight > innerHeight - 70 ? r.top - p.offsetHeight - 8 : top) + 'px';
+  clearTimeout(tjPop.t); tjPop.t = setTimeout(() => p.remove(), 6000);
+}
+document.addEventListener('click', e => {
+  const sp = e.target.closest('[class^="tj-"]');
+  if (sp && !sp.classList.contains('tjdot')) { e.stopPropagation(); e.preventDefault(); tjPop(sp, sp.className.slice(3, 4)); return; }
+  $('#tjpop')?.remove();
+}, true);
 async function loadData() {
   const res = await fetch('data/quran.json');
   const raw = await res.json();
