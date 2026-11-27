@@ -1,7 +1,14 @@
 {
-  "version": "2.8.0",
+  "version": "2.8.1",
   "date": "2026-11-22",
   "changelog": [
+    {
+      "version": "2.8.1",
+      "date": "2026-11-27",
+      "notes": [
+        "Tajwid vérifié sur tout le Coran : 6 erreurs corrigées, 11 règles manquantes ajoutées"
+      ]
+    },
     {
       "version": "2.8.0",
       "date": "2026-11-27",
