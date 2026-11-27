@@ -1,7 +1,7 @@
 /* Muraja'a — cartes de révision (QCM, récitation, audio, suivi) */
 'use strict';
 
-const VERSION = '2.10.0';
+const VERSION = '2.10.1';
 const STORE_KEY = 'coranRevision_v1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -510,7 +510,7 @@ function buildQuestion(mode) {
       const ans = x.nw[0][0], n = LEVEL() === 'facile' ? 4 : LEVEL() === 'difficile' ? 6 : 5;
       const letters = shuffle([...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'].filter(l => l !== ans)).slice(0, n - 1);
       return { mode, target: x, fl: true, ans, letters: shuffle([ans, ...letters]), prompt: 'Par quelle lettre commence ce verset ?',
-        showHtml: frBlock(x) + `<div class="ref">${esc(surahName(x.s))} · verset ${x.a}</div>` };
+        showHtml: arBlock(x.ar.replace(/([\u0621-\u064A\u0671-\u06D3])([\u064B-\u065F\u0670\u06D6-\u06ED]*)/, '<span class="flmask">&nbsp;&nbsp;&nbsp;</span>')) + frBlock(x) + `<div class="ref">${esc(surahName(x.s))} · verset ${x.a}</div>` };
     }
     case 'diff': {
       for (let k = 0; k < 40; k++) {
@@ -709,7 +709,7 @@ function renderCard(c) {
   if (q.show) body += arBlock(q.show.ar) + frBlock(q.show) + refLine(q.show);
   if (q.showHtml) body += q.showHtml;
   if (q.opts) body += `<div class="opts">${q.opts.map((o, i) => `<button class="opt ${o.fr ? 'fr-opt' : ''}" data-opt="${i}">${o.html}</button>`).join('')}</div>`;
-  if (q.fl) body += `<div class="flwrap"><button class="flslot" data-flslot aria-label="Ta réponse">؟</button></div>
+  if (q.fl) body += `<div class="flwrap"><button class="flslot" data-flslot aria-label="Ta réponse">?</button></div>
     <div class="fltiles">${q.letters.map(l => `<button class="wtile fl" data-fl="${l}">${l}</button>`).join('')}</div>`;
   if (q.errWords) body += `<div class="wsel">${q.errWords.map((w, i) => `<button class="wtile" data-ws="${i}">${w}</button>`).join('')}</div>`;
   if (q.items) body += `<div class="opts ord" data-ord>${q.items.map((it, i) => `<div class="opt ord-item" data-idx="${i}"><span class="grip">${ic('grip-vertical')}</span><span class="ot">${it.html}</span></div>`).join('')}</div>
@@ -751,7 +751,7 @@ function renderEff(c) {
 function flSelect(c, l) {
   if (c.answered) return;
   c.flSel = l;
-  const slot = $('[data-flslot]', c.el); slot.textContent = l || '؟'; slot.classList.toggle('set', !!l);
+  const slot = $('[data-flslot]', c.el); slot.textContent = l || '?'; slot.classList.toggle('set', !!l);
   $$('[data-fl]', c.el).forEach(t => t.classList.toggle('used', t.dataset.fl === l));
   $('[data-after]', c.el).innerHTML = l ? `<div class="btnrow"><button class="btn gold" data-flcheck>${ic('check')} Valider</button></div>` : '';
 }

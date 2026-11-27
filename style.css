@@ -403,3 +403,5 @@ h2{font-size:15px;color:var(--gold);margin:22px 2px 10px}
 .fltiles .fl{font-size:calc(34px*var(--as,1));min-width:62px;touch-action:none}
 .wtile.fl.good{background:var(--good-bg);color:var(--good-fg);border-color:var(--green)}.wtile.fl.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--red)}
 .flghost{position:fixed;z-index:9999;pointer-events:none;transform:translate(-50%,-50%) scale(1.15);opacity:.9;font-size:34px}
+
+.flmask{display:inline-block;min-width:1.1em;text-align:center;color:var(--gold);border-bottom:3px solid var(--gold);margin:0 2px;font-family:var(--ar)}
